@@ -72,7 +72,7 @@ const handleSavePlan = async (updatedDay) => {
     <div class="grid">
       <DayCard 
         v-for="day in weekDays" 
-        :key="day.id" (
+        :key="day.id"
         :day="day"
         @toggle-complete="handleToggleComplete"
         @click.self="openEditModal(day)"
