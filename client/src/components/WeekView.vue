@@ -6,15 +6,23 @@ import EditDayModal from './EditDayModal.vue';
 const weekDays = ref([]);
 const isModalOpen = ref(false);
 const editingDay = ref(null);
+const currentDate = ref(new Date());
 const API_URL = 'http://localhost:3000/api';
 
 const fetchWeek = async () => {
     try {
-        const res = await fetch(`${API_URL}/week`);
+        const res = await fetch(`${API_URL}/week?date=${currentDate.value.toISOString()}`);
         weekDays.value = await res.json();
     } catch (e) {
         console.error("Failed to fetch week", e);
     }
+};
+
+const changeWeek = (offset) => {
+    const newDate = new Date(currentDate.value);
+    newDate.setDate(newDate.getDate() + (offset * 7));
+    currentDate.value = newDate;
+    fetchWeek();
 };
 
 const completedCount = computed(() => weekDays.value.filter(d => d.status === 'completed').length);
@@ -74,7 +82,11 @@ const handleSavePlan = async (updatedDay) => {
   <div class="week-view">
     <header class="header glass-panel">
       <div class="header-content">
-        <h1>Weekly Plan</h1>
+        <div class="nav-controls">
+            <button class="nav-btn" @click="changeWeek(-1)">← Prev</button>
+            <h1>Weekly Plan</h1>
+            <button class="nav-btn" @click="changeWeek(1)">Next →</button>
+        </div>
         <div class="stats">
             <span class="highlight">{{ completedCount }}</span> / {{ weekDays.length }} Completed
         </div>
@@ -130,12 +142,31 @@ const handleSavePlan = async (updatedDay) => {
   align-items: center;
 }
 
+.nav-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.nav-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    padding: 8px 16px; /* Increased padding */
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+}
+.nav-btn:hover {
+    background: var(--accent-secondary);
+    color: white;
+}
+
 .header h1 {
   font-size: 2rem;
   background: linear-gradient(to right, var(--text-primary), var(--accent-secondary));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  margin: 0; /* Reset margin */
 }
 
 .stats {
