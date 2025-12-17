@@ -5,6 +5,14 @@ const props = defineProps({
   day: {
     type: Object,
     required: true
+  },
+  isReadOnly: {
+    type: Boolean,
+    default: false
+  },
+  allowCompletion: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -22,7 +30,7 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <div class="day-card glass-panel" :class="{ 'rest-day': isRestDay, 'completed': isCompleted }">
+  <div class="day-card glass-panel" :class="{ 'rest-day': isRestDay, 'completed': isCompleted, 'read-only': isReadOnly }">
     <div class="day-header">
       <span class="day-name">{{ day.dayName }}</span>
       <span class="day-date">{{ formattedDate }}</span>
@@ -44,7 +52,8 @@ const formattedDate = computed(() => {
         <button 
           v-if="!isRestDay" 
           class="check-btn" 
-          :class="{ active: isCompleted }"
+          :class="{ active: isCompleted, disabled: !allowCompletion || isReadOnly }"
+          :disabled="!allowCompletion || isReadOnly"
           @click="emit('toggle-complete', day.id)"
           aria-label="Mark as complete"
         >

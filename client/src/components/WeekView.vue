@@ -25,8 +25,28 @@ const changeWeek = (offset) => {
     fetchWeek();
 };
 
-const completedCount = computed(() => weekDays.value.filter(d => d.status === 'completed').length);
+const completedCount = computed(() => weekDays.value.filter(d => d.status === 'completed' || d.isRestDay).length);
 const progressPercent = computed(() => weekDays.value.length ? Math.round((completedCount.value / weekDays.value.length) * 100) : 0);
+
+// Helper to check relative time for the current week view
+const today = new Date();
+today.setHours(0,0,0,0);
+
+const isPastWeek = computed(() => {
+    if (!weekDays.value.length) return false;
+    // Check if the last day of the week is before today
+    const lastDay = new Date(weekDays.value[6].date);
+    return lastDay < today;
+});
+
+const isFutureWeek = computed(() => {
+    if (!weekDays.value.length) return false;
+    // Check if the first day of the week is after today
+    const firstDay = new Date(weekDays.value[0].date);
+    // Use > (greater than) to allow "Current Week" (where Monday <= today) to be editable
+    // Actually if Monday is tomorrow, it IS a future week.
+    return firstDay > today;
+});
 
 onMounted(fetchWeek);
 
@@ -101,10 +121,12 @@ const handleSavePlan = async (updatedDay) => {
         v-for="day in weekDays" 
         :key="day.id"
         :day="day"
+        :is-read-only="isPastWeek"
+        :allow-completion="!isFutureWeek"
         @toggle-complete="handleToggleComplete"
       >
         <template #actions-extra>
-            <button class="edit-btn" @click.stop="openEditModal(day)">
+            <button v-if="!isPastWeek" class="edit-btn" @click.stop="openEditModal(day)">
               <span class="icon">✎</span> Edit
             </button>
         </template>
