@@ -4,7 +4,10 @@ import WeekView from './components/WeekView.vue';
 
 <template>
   <header>
-    <div class="logo">⭐ Track Star</div>
+    <div class="brand">
+        <img src="/logo.svg" alt="Track Star Logo" class="logo-img" />
+        <div class="logo-text">Track Star</div>
+    </div>
     <nav>
       <!-- Navigation placeholders -->
     </nav>
@@ -25,7 +28,19 @@ header {
   margin-bottom: var(--spacing-lg);
 }
 
-.logo {
+.brand {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.logo-img {
+    width: 48px;
+    height: 48px;
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.logo-text {
   font-size: 2rem;
   font-weight: 700;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
