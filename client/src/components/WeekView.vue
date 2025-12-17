@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import DayCard from './DayCard.vue';
 import EditDayModal from './EditDayModal.vue';
 
@@ -16,6 +16,9 @@ const fetchWeek = async () => {
         console.error("Failed to fetch week", e);
     }
 };
+
+const completedCount = computed(() => weekDays.value.filter(d => d.status === 'completed').length);
+const progressPercent = computed(() => weekDays.value.length ? Math.round((completedCount.value / weekDays.value.length) * 100) : 0);
 
 onMounted(fetchWeek);
 
@@ -69,17 +72,29 @@ const handleSavePlan = async (updatedDay) => {
 
 <template>
   <div class="week-view">
-    <div class="grid">
+    <header class="header glass-panel">
+      <div class="header-content">
+        <h1>Weekly Plan</h1>
+        <div class="stats">
+            <span class="highlight">{{ completedCount }}</span> / {{ weekDays.length }} Completed
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+      </div>
+    </header>
+
+    <div class="grid-container">
       <DayCard 
         v-for="day in weekDays" 
         :key="day.id"
         :day="day"
         @toggle-complete="handleToggleComplete"
-        @click.self="openEditModal(day)"
       >
-        <!-- Pass a slot or action to open edit -->
         <template #actions-extra>
-            <button class="edit-btn" @click.stop="openEditModal(day)">✎ Edit</button>
+            <button class="edit-btn" @click.stop="openEditModal(day)">
+              <span class="icon">✎</span> Edit
+            </button>
         </template>
       </DayCard>
     </div>
@@ -96,26 +111,85 @@ const handleSavePlan = async (updatedDay) => {
 <style scoped>
 .week-view {
   width: 100%;
-  overflow-x: auto;
-  padding: var(--spacing-sm) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
 }
 
-.grid {
-  display: flex; /* Horizontal scroll */
+.header {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
-  padding-bottom: var(--spacing-md); /* Space for scrollbar */
+  margin-bottom: var(--spacing-md);
 }
 
-/* For larger screens, maybe we want a grid? 
-   But "Plan for a week" usually implies a timeline. 
-   Let's stick to horizontal flex for now or a 7-col grid if space permits.
-*/
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  font-size: 2rem;
+  background: linear-gradient(to right, var(--text-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stats {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.highlight {
+  color: var(--accent-primary);
+  font-size: 1.2em;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: var(--radius-sm);
+  transition: width 0.5s ease-out;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.grid-container {
+  display: flex;
+  gap: var(--spacing-md);
+  overflow-x: auto;
+  padding: var(--spacing-xs); /* Avoid shadow clipping */
+  padding-bottom: var(--spacing-lg);
+  scroll-snap-type: x mandatory;
+}
+
+.edit-btn {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+.edit-btn:hover {
+  background: var(--accent-secondary);
+  color: white;
+}
+
 @media (min-width: 1000px) {
-  .grid {
+  .grid-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     overflow-x: visible;
-    gap: var(--spacing-md);
   }
 }
 </style>

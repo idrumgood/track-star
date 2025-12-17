@@ -22,7 +22,7 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <div class="day-card" :class="{ 'rest-day': isRestDay, 'completed': isCompleted }">
+  <div class="day-card glass-panel" :class="{ 'rest-day': isRestDay, 'completed': isCompleted }">
     <div class="day-header">
       <span class="day-name">{{ day.dayName }}</span>
       <span class="day-date">{{ formattedDate }}</span>
@@ -40,7 +40,7 @@ const formattedDate = computed(() => {
         <!-- Edit trigger -->
         <slot name="actions-extra"></slot>
         
-        <!-- Checkbox for completion -->
+        <!-- Toggle Completion -->
         <button 
           v-if="!isRestDay" 
           class="check-btn" 
@@ -48,8 +48,7 @@ const formattedDate = computed(() => {
           @click="emit('toggle-complete', day.id)"
           aria-label="Mark as complete"
         >
-          <span v-if="isCompleted">✅</span>
-          <span v-else>⬜</span>
+          <div class="check-icon" v-if="isCompleted">✓</div>
         </button>
       </div>
       
@@ -65,32 +64,30 @@ const formattedDate = computed(() => {
 
 <style scoped>
 .day-card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
   padding: var(--spacing-md);
   min-width: 280px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  backdrop-filter: blur(12px);
-  transition: transform 0.2s;
-  flex: 1;
-  position: relative; /* For edit button positioning if needed, though flex is better */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative; 
+  border: 1px solid var(--border-color);
 }
 
-/* Allow clicking the card to potentially allow edit, but button is clearer */
-
-/* ... existing styles ... */
-
 .day-card:hover {
-  border-color: var(--primary);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+  border-color: var(--accent-secondary);
+}
+
+.day-card.completed {
+  border-color: var(--accent-primary);
+  background: linear-gradient(to bottom right, var(--surface-card), rgba(16, 185, 129, 0.1));
 }
 
 .day-card.rest-day {
-  border-color: var(--accent);
-  opacity: 0.8;
+  opacity: 0.7;
+  border-style: dashed;
 }
 
 .day-header {
@@ -99,46 +96,79 @@ const formattedDate = computed(() => {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: var(--spacing-xs);
   margin-bottom: var(--spacing-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .workout-info h3 {
-  font-size: 1.4rem;
-  font-weight: 500;
-  color: var(--text-main);
+  font-size: 1.5rem;
+  color: var(--text-primary);
   margin-bottom: var(--spacing-sm);
 }
 
 .rest-badge {
-  color: var(--accent);
-  font-weight: 600;
-  font-size: 1.2rem;
+  color: var(--text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .actions {
   margin-top: auto;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between; /* Space out edit and check */
+  align-items: center;
+  padding-top: var(--spacing-sm);
 }
 
+/* Custom Checkbox Button */
 .check-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--text-muted);
   background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: transparent;
 }
+
 .check-btn:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.check-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--bg-primary);
+  box-shadow: 0 0 12px var(--accent-glow);
   transform: scale(1.1);
-  box-shadow: none;
-  background: transparent;
+}
+
+.check-icon {
+  font-weight: bold;
+  font-size: 1.2rem;
 }
 
 .extras {
   margin-top: var(--spacing-xs);
-  font-size: 0.9rem;
-  color: var(--success);
+  font-size: 0.85rem;
+  color: var(--accent-secondary);
+}
+
+.extra-item {
+  background: rgba(59, 130, 246, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-right: 4px;
+  margin-bottom: 4px;
 }
 </style>

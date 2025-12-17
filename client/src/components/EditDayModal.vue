@@ -49,7 +49,7 @@ const removeExtra = (index) => {
 
 <template>
   <div v-if="isOpen" class="modal-backdrop" @click.self="$emit('close')">
-    <div class="modal">
+    <div class="modal glass-panel">
       <div class="modal-header">
         <h2>Edit Plan for {{ dayData?.dayName }}</h2>
         <button class="close-btn" @click="$emit('close')">×</button>
@@ -106,27 +106,31 @@ const removeExtra = (index) => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
-  animation: slideIn 0.3s ease-out;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--border-color);
 }
 
-@keyframes slideIn {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+@keyframes slideUp {
+  from { transform: translateY(20px) scale(0.95); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 .modal-header {
@@ -138,7 +142,8 @@ const removeExtra = (index) => {
 }
 
 .close-btn {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
   border: none;
   font-size: 1.5rem;
   padding: 0;
@@ -150,7 +155,8 @@ const removeExtra = (index) => {
   border-radius: 50%;
 }
 .close-btn:hover {
-  background: var(--bg-card-hover);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
 }
 
 .modal-body {
@@ -177,19 +183,26 @@ const removeExtra = (index) => {
   gap: var(--spacing-sm);
   font-weight: 500;
   cursor: pointer;
+  color: var(--text-secondary);
+}
+.checkbox-label:hover {
+  color: var(--text-primary);
 }
 
 input[type="text"] {
-  background: var(--bg-app);
-  border: 1px solid var(--glass-border);
-  padding: var(--spacing-sm);
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid var(--border-color);
+  padding: var(--spacing-md);
   border-radius: var(--radius-sm);
-  color: var(--text-main);
+  color: var(--text-primary);
   font-size: 1rem;
+  transition: all 0.2s;
 }
 input[type="text"]:focus {
-  outline: 2px solid var(--primary);
-  border-color: transparent;
+  outline: none;
+  border-color: var(--accent-secondary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  background: rgba(15, 23, 42, 0.5);
 }
 
 .extras-list {
@@ -200,14 +213,15 @@ input[type="text"]:focus {
 }
 
 .extra-tag {
-  background: rgba(74, 222, 128, 0.1);
-  color: var(--success);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-secondary);
+  padding: 4px 10px;
+  border-radius: 20px;
   font-size: 0.9rem;
   display: flex;
   align-items: center;
   gap: 6px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .remove-extra {
@@ -227,6 +241,12 @@ input[type="text"]:focus {
 
 .small-btn {
   padding: 0 1rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+}
+.small-btn:hover {
+  background: var(--surface-hover);
 }
 
 .modal-footer {
@@ -234,17 +254,30 @@ input[type="text"]:focus {
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
+}
+
+.cancel-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+}
+.cancel-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .save-btn {
-  background: var(--primary);
-  color: #0f172a; /* Dark text for contrast against bright primary */
-  border-color: var(--primary);
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+  color: white;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
   font-weight: 600;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
 .save-btn:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+  box-shadow: 0 0 15px var(--accent-glow);
+  transform: translateY(-1px);
 }
 </style>
