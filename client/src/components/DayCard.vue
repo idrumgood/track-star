@@ -30,7 +30,7 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <div class="day-card glass-panel" :class="{ 'rest-day': isRestDay, 'completed': isCompleted, 'read-only': isReadOnly }">
+  <div class="day-card glass-panel" :class="{ 'rest-day': isRestDay, 'completed': isCompleted, 'skipped': isSkipped, 'read-only': isReadOnly }">
     <div class="day-header">
       <span class="day-name">{{ day.dayName }}</span>
       <span class="day-date">{{ formattedDate }}</span>
@@ -92,6 +92,12 @@ const formattedDate = computed(() => {
 .day-card.completed {
   border-color: var(--accent-primary);
   background: linear-gradient(to bottom right, var(--surface-card), rgba(16, 185, 129, 0.1));
+}
+
+.day-card.skipped {
+  opacity: 0.8;
+  border-color: #ef4444; /* Red for skipped */
+  background: linear-gradient(to bottom right, var(--surface-card), rgba(239, 68, 68, 0.05));
 }
 
 .day-card.rest-day {

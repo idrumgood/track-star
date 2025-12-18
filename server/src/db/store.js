@@ -30,7 +30,19 @@ const getWeek = (date) => {
         weeks.set(key, generateWeek(monday));
     }
 
-    return weeks.get(key);
+    const week = weeks.get(key);
+
+    // Check for skipped days
+    const today = new Date();
+    const todayId = generateId(today);
+
+    week.forEach(day => {
+        if (day.id < todayId && day.status === 'pending' && !day.isRestDay) {
+            day.status = 'skipped';
+        }
+    });
+
+    return week;
 };
 
 const updateDay = (dayId, data) => {
