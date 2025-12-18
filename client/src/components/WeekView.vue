@@ -9,12 +9,17 @@ const editingDay = ref(null);
 const currentDate = ref(new Date());
 const API_URL = 'http://localhost:3000/api';
 
+const isLoading = ref(true);
+
 const fetchWeek = async () => {
+    isLoading.value = true;
     try {
         const res = await fetch(`${API_URL}/week?date=${currentDate.value.toISOString()}`);
         weekDays.value = await res.json();
     } catch (e) {
         console.error("Failed to fetch week", e);
+    } finally {
+        isLoading.value = false;
     }
 };
 
@@ -93,8 +98,33 @@ const openEditModal = (day) => {
 };
 
 const handleSavePlan = async (updatedDay) => {
-    await updateDay(updatedDay);
-    isModalOpen.value = false;
+    // 1. Optimistic Update
+    const index = weekDays.value.findIndex(d => d.id === updatedDay.id);
+    let originalDay = null;
+
+    if (index !== -1) {
+        originalDay = { ...weekDays.value[index] };
+        
+        const optimisticallyUpdated = { ...updatedDay };
+        if (optimisticallyUpdated.isRestDay && optimisticallyUpdated.status === 'skipped') {
+            optimisticallyUpdated.status = 'pending';
+        }
+        weekDays.value[index] = optimisticallyUpdated; // Apply update immediately
+    }
+
+    isModalOpen.value = false; // Close modal immediately
+
+    // 2. Sync with Server
+    try {
+        await updateDay(updatedDay);
+    } catch (e) {
+        // 3. Revert on failure
+        console.error("Save failed, reverting...", e);
+        if (index !== -1 && originalDay) {
+            weekDays.value[index] = originalDay;
+        }
+        // Optional: Show error toast here
+    }
 };
 </script>
 
@@ -108,7 +138,7 @@ const handleSavePlan = async (updatedDay) => {
             <button class="nav-btn" @click="changeWeek(1)">Next →</button>
         </div>
         <div class="stats">
-            <span class="highlight">{{ completedCount }}</span> / {{ weekDays.length }} Completed
+            <span v-if="!isLoading"><span class="highlight">{{ completedCount }}</span> / {{ weekDays.length }} Completed</span>
         </div>
       </div>
       <div class="progress-track">
@@ -116,7 +146,15 @@ const handleSavePlan = async (updatedDay) => {
       </div>
     </header>
 
-    <div class="grid-container">
+    <div v-if="isLoading" class="grid-container">
+        <div v-for="n in 7" :key="n" class="day-card glass-panel skeleton-card">
+            <div class="skeleton-header"></div>
+            <div class="skeleton-body"></div>
+            <div class="skeleton-actions"></div>
+        </div>
+    </div>
+
+    <div v-else class="grid-container">
       <DayCard 
         v-for="day in weekDays" 
         :key="day.id"
@@ -244,5 +282,63 @@ const handleSavePlan = async (updatedDay) => {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     overflow-x: visible;
   }
+}
+
+/* Skeleton Loading */
+.skeleton-card {
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+  pointer-events: none;
+}
+
+.skeleton-header {
+  height: 24px;
+  width: 60%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin-bottom: var(--spacing-sm);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.skeleton-body {
+  height: 100px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  margin-bottom: var(--spacing-sm);
+  animation: pulse 1.5s infinite ease-in-out 0.2s; /* Staggered animation */
+}
+
+.skeleton-actions {
+    height: 32px;
+    width: 100%;
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+}
+
+.skeleton-actions::before,
+.skeleton-actions::after {
+    content: '';
+    display: block;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    animation: pulse 1.5s infinite ease-in-out 0.4s;
+}
+
+.skeleton-actions::before {
+    width: 60px; /* Edit button width approximation */
+}
+
+.skeleton-actions::after {
+    width: 32px; /* Check button width */
+    border-radius: 50%;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+  100% { opacity: 0.3; }
 }
 </style>

@@ -37,6 +37,11 @@ const getWeek = (date) => {
     const todayId = generateId(today);
 
     week.forEach(day => {
+        // Enforce: Rest Days cannot be skipped
+        if (day.isRestDay && day.status === 'skipped') {
+            day.status = 'pending';
+        }
+
         if (day.id < todayId && day.status === 'pending' && !day.isRestDay) {
             day.status = 'skipped';
         }
@@ -58,6 +63,12 @@ const updateDay = (dayId, data) => {
 
         if (index !== -1) {
             week[index] = { ...week[index], ...data };
+
+            // Enforce: Rest Days cannot be skipped
+            if (week[index].isRestDay && week[index].status === 'skipped') {
+                week[index].status = 'pending';
+            }
+
             return week[index];
         }
     }
