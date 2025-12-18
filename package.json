@@ -3,6 +3,9 @@
     "private": true,
     "scripts": {
         "start": "concurrently \"npm run server\" \"npm run client\"",
+        "setup": "npm install && npm run install:client && npm run install:server",
+        "install:client": "cd client && npm install",
+        "install:server": "cd server && npm install",
         "server": "cd server && npm start",
         "client": "cd client && npm run dev"
     },
