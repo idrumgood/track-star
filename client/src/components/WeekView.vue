@@ -7,7 +7,7 @@ const weekDays = ref([]);
 const isModalOpen = ref(false);
 const editingDay = ref(null);
 const currentDate = ref(new Date());
-const API_URL = 'http://localhost:3000/api';
+const API_URL = '/api';
 
 const isLoading = ref(true);
 
