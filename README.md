@@ -42,3 +42,7 @@ This command uses `concurrently` to launch:
 - `/client`: Vue.js frontend application.
 - `/server`: Node.js/Express backend API.
 - `package.json`: Root configuration and scripts.
+
+## Deployment
+
+For detailed instructions on how to build, run, and deploy this application using Docker and Google Cloud Run, please see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
