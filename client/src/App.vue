@@ -23,21 +23,37 @@ onMounted(async () => {
 });
 
 const initGoogleSignIn = (clientId) => {
-    if (window.google) {
-        window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: handleCredentialResponse
-        });
-        
-        const btnContainer = document.getElementById('google-btn-container');
-        if (btnContainer && !user.value) {
-            window.google.accounts.id.renderButton(
-                btnContainer,
-                { theme: 'outline', size: 'large', type: 'standard', shape: 'pill' }
-            );
+    const tryInit = () => {
+        if (window.google) {
+            window.google.accounts.id.initialize({
+                client_id: clientId,
+                callback: handleCredentialResponse,
+                auto_select: true // Try to auto-sign in if possible
+            });
+            
+            // Render in ALL available containers
+            const btnContainers = document.querySelectorAll('.google-btn-container');
+            btnContainers.forEach(container => {
+                if (container && !user.value) {
+                    window.google.accounts.id.renderButton(
+                        container,
+                        { theme: 'outline', size: 'large', type: 'standard', shape: 'pill' }
+                    );
+                }
+            });
+            
+            // Optional: Also display the One Tap prompt
+            if (!user.value) {
+                window.google.accounts.id.prompt();
+            }
+        } else {
+            // Script might still be loading, retry in 100ms
+            setTimeout(tryInit, 100);
         }
-    }
+    };
+    tryInit();
 };
+
 
 
 const handleCredentialResponse = (response) => {
@@ -61,12 +77,15 @@ const logout = () => {
     localStorage.removeItem('track_star_user');
     // Re-render button next frame if needed
     setTimeout(() => {
-        const btnContainer = document.getElementById('google-btn-container');
-        if (btnContainer && window.google) {
-            window.google.accounts.id.renderButton(
-                btnContainer,
-                { theme: 'outline', size: 'large', type: 'standard', shape: 'pill' }
-            );
+        const btnContainers = document.querySelectorAll('.google-btn-container');
+        if (window.google) {
+            btnContainers.forEach(container => {
+                window.google.accounts.id.renderButton(
+                    container,
+                    { theme: 'outline', size: 'large', type: 'standard', shape: 'pill' }
+                );
+            });
+            window.google.accounts.id.prompt(); // Re-show prompt if applicable
         }
     }, 0);
 };
@@ -85,7 +104,7 @@ const logout = () => {
             <button class="auth-btn" @click="logout">Logout</button>
         </div>
         <div v-else class="auth-options">
-            <div id="google-btn-container"></div>
+            <div class="google-btn-container"></div>
         </div>
     </div>
   </header>
@@ -95,7 +114,7 @@ const logout = () => {
         <h2>Welcome to Track Star</h2>
         <p>Please log in with your Google account to see your training plan.</p>
         <div class="prompt-actions">
-            <div id="google-btn-container"></div>
+            <div class="google-btn-container"></div>
         </div>
     </div>
     <WeekView v-else :user="user" />
