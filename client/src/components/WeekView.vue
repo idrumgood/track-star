@@ -222,10 +222,7 @@ const handleSavePlan = async (updatedDay) => {
 
 .header h1 {
   font-size: 2rem;
-  background: linear-gradient(to right, var(--text-primary), var(--accent-secondary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-primary); /* Solid color */
   margin: 0; /* Reset margin */
 }
 
@@ -249,10 +246,10 @@ const handleSavePlan = async (updatedDay) => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  background: var(--accent-primary); /* Solid emerald */
   border-radius: var(--radius-sm);
   transition: width 0.5s ease-out;
-  box-shadow: 0 0 10px var(--accent-glow);
+  /* Shadow removed globally */
 }
 
 .grid-container {

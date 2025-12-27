@@ -269,15 +269,15 @@ input[type="text"]:focus {
 }
 
 .save-btn {
-  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+  background: var(--accent-secondary); /* Solid */
   color: white;
   padding: 8px 20px;
   border-radius: var(--radius-sm);
   font-weight: 600;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); /* Softer shadow */
 }
 .save-btn:hover {
-  box-shadow: 0 0 15px var(--accent-glow);
+  background: #4f46e5; /* Slightly darker indigo manually or use filter in future */
   transform: translateY(-1px);
 }
 </style>

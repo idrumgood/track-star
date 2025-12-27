@@ -152,13 +152,42 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
   flex-direction: column;
   align-items: center;
   position: relative;
+  transition: background-color 0.3s ease;
 }
 
-.calendar-card.completed .calendar-header {
-    background: rgba(16, 185, 129, 0.1);
+/* Subtler Statuses: Colored Border + Text */
+.calendar-card.completed {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 1px var(--accent-primary); /* Double border effect */
 }
+.calendar-card.skipped {
+    border-color: var(--accent-danger);
+    box-shadow: 0 0 0 1px var(--accent-danger);
+}
+
+.calendar-card.completed .day-label {
+    color: var(--accent-primary);
+}
+.calendar-card.skipped .day-label {
+    color: var(--accent-danger);
+}
+
+/* Revert header background changes */
+.calendar-card.completed .calendar-header,
 .calendar-card.skipped .calendar-header {
-    background: rgba(239, 68, 68, 0.1);
+    background: var(--bg-secondary);
+    border-bottom-style: dashed;
+    border-bottom-color: var(--border-color);
+}
+
+/* Revert text colors in header */
+.calendar-card.completed .month-label,
+.calendar-card.skipped .month-label {
+    color: var(--text-muted);
+}
+.calendar-card.completed .weekday-label,
+.calendar-card.skipped .weekday-label {
+    color: var(--accent-secondary);
 }
 
 .month-label {
@@ -195,7 +224,7 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0) 100%);
+  background: var(--surface-card); /* Solid background */
 }
 
 .plan-content h3 {

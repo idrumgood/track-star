@@ -43,11 +43,8 @@ header {
 .logo-text {
   font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-primary); /* Solid */
   letter-spacing: -0.05em;
-  filter: drop-shadow(0 0 10px var(--accent-glow));
+  /* Filters/shadows removed globally */
 }
 </style>
