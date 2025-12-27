@@ -4,15 +4,54 @@ import WeekView from './components/WeekView.vue';
 
 const user = ref(null);
 
-onMounted(() => {
+onMounted(async () => {
     const savedUser = localStorage.getItem('track_star_user');
     if (savedUser) {
         user.value = JSON.parse(savedUser);
     }
+    
+    // Fetch dynamic config from backend
+    try {
+        const res = await fetch('/api/config');
+        const config = await res.json();
+        if (config.googleClientId) {
+            initGoogleSignIn(config.googleClientId);
+        }
+    } catch (e) {
+        console.error("Failed to fetch app config", e);
+    }
 });
 
-const login = (id) => {
-    const newUser = { id, name: id.charAt(0).toUpperCase() + id.slice(1) };
+const initGoogleSignIn = (clientId) => {
+    if (window.google) {
+        window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleCredentialResponse
+        });
+        
+        const btnContainer = document.getElementById('google-btn-container');
+        if (btnContainer && !user.value) {
+            window.google.accounts.id.renderButton(
+                btnContainer,
+                { theme: 'outline', size: 'large', type: 'standard', shape: 'pill' }
+            );
+        }
+    }
+};
+
+
+const handleCredentialResponse = (response) => {
+    // response.credential is the ID Token (JWT)
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    
+    const newUser = {
+        id: payload.sub,
+        name: payload.name,
+        email: payload.email,
+        picture: payload.picture,
+        idToken: response.credential
+    };
+    
     user.value = newUser;
     localStorage.setItem('track_star_user', JSON.stringify(newUser));
 };
@@ -20,6 +59,16 @@ const login = (id) => {
 const logout = () => {
     user.value = null;
     localStorage.removeItem('track_star_user');
+    // Re-render button next frame if needed
+    setTimeout(() => {
+        const btnContainer = document.getElementById('google-btn-container');
+        if (btnContainer && window.google) {
+            window.google.accounts.id.renderButton(
+                btnContainer,
+                { theme: 'outline', size: 'large', type: 'standard', shape: 'pill' }
+            );
+        }
+    }, 0);
 };
 </script>
 
@@ -31,12 +80,12 @@ const logout = () => {
     </div>
     <div class="user-controls">
         <div v-if="user" class="user-info">
+            <img v-if="user.picture" :src="user.picture" class="user-avatar" />
             <span class="user-name">{{ user.name }}</span>
             <button class="auth-btn" @click="logout">Logout</button>
         </div>
         <div v-else class="auth-options">
-            <button class="auth-btn" @click="login('demo-user')">Demo Login</button>
-            <button class="auth-btn" @click="login('tester')">Tester Login</button>
+            <div id="google-btn-container"></div>
         </div>
     </div>
   </header>
@@ -44,9 +93,9 @@ const logout = () => {
   <main>
     <div v-if="!user" class="login-prompt glass-panel">
         <h2>Welcome to Track Star</h2>
-        <p>Please log in to see your training plan.</p>
+        <p>Please log in with your Google account to see your training plan.</p>
         <div class="prompt-actions">
-            <button class="auth-btn large" @click="login('demo-user')">Get Started</button>
+            <div id="google-btn-container"></div>
         </div>
     </div>
     <WeekView v-else :user="user" />
@@ -92,6 +141,13 @@ header {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-primary);
 }
 
 .user-name {
