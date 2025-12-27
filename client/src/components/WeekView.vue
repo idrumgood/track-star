@@ -1,7 +1,14 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import DayCard from './DayCard.vue';
 import EditDayModal from './EditDayModal.vue';
+
+const props = defineProps({
+    user: {
+        type: Object,
+        required: true
+    }
+});
 
 const weekDays = ref([]);
 const isModalOpen = ref(false);
@@ -12,16 +19,26 @@ const API_URL = '/api';
 const isLoading = ref(true);
 
 const fetchWeek = async () => {
+    if (!props.user) return;
     isLoading.value = true;
     try {
-        const res = await fetch(`${API_URL}/week?date=${currentDate.value.toISOString()}`);
-        weekDays.value = await res.json();
+        const res = await fetch(`${API_URL}/week?date=${currentDate.value.toISOString()}`, {
+            headers: { 'x-user-id': props.user.id }
+        });
+        if (res.ok) {
+            weekDays.value = await res.json();
+        }
     } catch (e) {
         console.error("Failed to fetch week", e);
     } finally {
         isLoading.value = false;
     }
 };
+
+onMounted(fetchWeek);
+
+// Refetch when user changes (e.g. login/logout handled by parent, but switching users needs this)
+watch(() => props.user, fetchWeek);
 
 const changeWeek = (offset) => {
     const newDate = new Date(currentDate.value);
@@ -53,13 +70,14 @@ const isFutureWeek = computed(() => {
     return firstDay > today;
 });
 
-onMounted(fetchWeek);
-
 const updateDay = async (day) => {
     try {
         const res = await fetch(`${API_URL}/day/${day.id}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-user-id': props.user.id
+            },
             body: JSON.stringify(day)
         });
         
