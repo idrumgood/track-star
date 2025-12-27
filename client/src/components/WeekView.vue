@@ -7,7 +7,7 @@ const weekDays = ref([]);
 const isModalOpen = ref(false);
 const editingDay = ref(null);
 const currentDate = ref(new Date());
-const API_URL = 'http://localhost:3000/api';
+const API_URL = '/api';
 
 const isLoading = ref(true);
 
@@ -279,8 +279,10 @@ const handleSavePlan = async (updatedDay) => {
 @media (min-width: 1000px) {
   .grid-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* auto-fill prevents stretching too wide */
+    gap: var(--spacing-lg);
     overflow-x: visible;
+    padding-bottom: 0;
   }
 }
 
