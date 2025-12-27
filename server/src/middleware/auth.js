@@ -1,22 +1,42 @@
-/**
- * Mock Authentication Middleware
- * In a real app, this would verify a JWT token.
- * For now, it just looks for a x-user-id header.
- */
-const mockAuth = (req, res, next) => {
-    const userId = req.headers['x-user-id'];
+const { OAuth2Client } = require('google-auth-library');
 
-    if (!userId) {
-        return res.status(401).json({ error: "Unauthorized: Missing x-user-id header" });
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+/**
+ * Google Authentication Middleware
+ * Verifies the Google ID Token sent in the Authorization header.
+ */
+const auth = async (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
     }
 
-    // Mock user object
-    req.user = {
-        id: userId,
-        name: userId.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-    };
+    const token = authHeader.split(' ')[1];
 
-    next();
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+
+        // Populate user object
+        req.user = {
+            id: payload.sub,
+            name: payload.name,
+            email: payload.email,
+            picture: payload.picture
+        };
+
+        next();
+    } catch (error) {
+        console.error("Token verification failed:", error);
+        return res.status(401).json({ error: "Unauthorized: Invalid ID Token" });
+    }
 };
 
-module.exports = mockAuth;
+module.exports = auth;
+

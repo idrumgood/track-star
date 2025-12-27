@@ -23,7 +23,7 @@ const fetchWeek = async () => {
     isLoading.value = true;
     try {
         const res = await fetch(`${API_URL}/week?date=${currentDate.value.toISOString()}`, {
-            headers: { 'x-user-id': props.user.id }
+            headers: { 'Authorization': `Bearer ${props.user.idToken}` }
         });
         if (res.ok) {
             weekDays.value = await res.json();
@@ -76,7 +76,7 @@ const updateDay = async (day) => {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'x-user-id': props.user.id
+                'Authorization': `Bearer ${props.user.idToken}`
             },
             body: JSON.stringify(day)
         });

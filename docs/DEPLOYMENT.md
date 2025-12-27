@@ -44,19 +44,39 @@ docker run -p 3000:3000 track-star
     gcloud config set project [PROJECT-ID]
     ```
 
-2.  **Tag the image** and submit build to Google Container Registry (GCR):
+2.  **Tag the image** and submit build to Google Cloud Build:
     ```bash
     gcloud builds submit --tag gcr.io/[PROJECT-ID]/track-star
     ```
 
-2.  **Deploy to Cloud Run**:
+
+3.  **Deploy to Cloud Run**:
+    Pass the necessary environment variables for Firestore and Google Auth:
+
     ```bash
     gcloud run deploy track-star \
       --image gcr.io/[PROJECT-ID]/track-star \
       --platform managed \
       --region us-central1 \
-      --allow-unauthenticated
+      --allow-unauthenticated \
+      --set-env-vars="GOOGLE_CLOUD_PROJECT=[PROJECT-ID],FIRESTORE_DATABASE_ID=[DATABASE-ID],GOOGLE_CLIENT_ID=[GOOGLE-CLIENT-ID]"
     ```
+
+## 4. Google Cloud Console Configuration
+
+After deploying, you must update your Google Cloud Console settings to allow the live URL to use Google Sign-In.
+
+### OAuth 2.0 Client ID
+1.  Go to **APIs & Services > Credentials** in the Google Cloud Console.
+2.  Edit your **OAuth 2.0 Client ID** used for this app.
+3.  Under **Authorized JavaScript origins**, add your Cloud Run URL:
+    - `https://track-star-xxxxxx.a.run.app`
+4.  (Optional but recommended) Add the same URL to **Authorized redirect URIs**.
+5.  Save the changes.
+
+### Firestore
+Ensure the **Firestore API** is enabled for your project and that the Cloud Run service account has the **Cloud Datastore User** role (or similar) if you encounter permission errors.
+
 
 ## Troubleshooting
 
