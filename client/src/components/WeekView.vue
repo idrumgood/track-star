@@ -218,20 +218,24 @@ const handleSavePlan = async (updatedDay) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
 }
 
 .nav-controls {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
 }
 
 .nav-btn {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
-    padding: 8px 16px; /* Increased padding */
+    padding: 8px 12px;
     border-radius: var(--radius-sm);
     font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
 }
 .nav-btn:hover {
     background: var(--accent-secondary);
@@ -239,14 +243,16 @@ const handleSavePlan = async (updatedDay) => {
 }
 
 .header h1 {
-  font-size: 2rem;
-  color: var(--text-primary); /* Solid color */
-  margin: 0; /* Reset margin */
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
 }
 
 .stats {
   font-weight: 600;
   color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .highlight {
@@ -260,11 +266,12 @@ const handleSavePlan = async (updatedDay) => {
   background: rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-sm);
   overflow: hidden;
+  margin-top: var(--spacing-sm);
 }
 
 .progress-fill {
   height: 100%;
-  background: var(--accent-primary); /* Solid emerald */
+  background: var(--accent-primary);
   border-radius: var(--radius-sm);
   transition: width 0.5s ease-out;
   /* Shadow removed globally */
@@ -272,19 +279,28 @@ const handleSavePlan = async (updatedDay) => {
 
 .grid-container {
   display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
-  overflow-x: auto;
-  padding: var(--spacing-xs); /* Avoid shadow clipping */
+  padding: var(--spacing-xs);
   padding-bottom: var(--spacing-lg);
-  scroll-snap-type: x mandatory;
 }
 
+/* Ensure child cards take full width but don't shrink */
+.grid-container > * {
+    flex-shrink: 0;
+    width: 100%;
+}
+
+
 .edit-btn {
-  background: rgba(255,255,255,0.1);
-  color: var(--text-secondary);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 .edit-btn:hover {
   background: var(--accent-secondary);
@@ -292,12 +308,21 @@ const handleSavePlan = async (updatedDay) => {
 }
 
 @media (min-width: 1000px) {
+  .header h1 {
+    font-size: 2rem;
+  }
+  
   .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* auto-fill prevents stretching too wide */
     gap: var(--spacing-lg);
     overflow-x: visible;
     padding-bottom: 0;
+  }
+  
+  .grid-container > * {
+    scroll-snap-align: none;
+    flex-shrink: 1;
   }
 }
 

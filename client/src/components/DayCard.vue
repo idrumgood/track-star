@@ -107,8 +107,9 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
   position: relative;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   border: 1px solid var(--border-color);
-  min-height: 220px;
-  cursor: default; /* Default to non-interactive */
+  min-height: 180px; /* Slightly more compact for vertical stack */
+  width: 100%;
+  cursor: default;
   user-select: none;
 }
 
@@ -121,6 +122,7 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
   box-shadow: var(--shadow-glow);
   border-color: var(--accent-secondary);
 }
+
 
 /* Binder Rings Visual */
 .binder-rings {
@@ -146,7 +148,7 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
 .calendar-header {
   background: var(--bg-secondary);
   padding: var(--spacing-sm);
-  padding-top: var(--spacing-md); /* Space for rings */
+  padding-top: var(--spacing-md);
   text-align: center;
   border-bottom: 2px dashed var(--border-color);
   display: flex;
@@ -156,10 +158,10 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
   transition: background-color 0.3s ease;
 }
 
-/* Subtler Statuses: Colored Border + Text */
+/* Status Colors */
 .calendar-card.completed {
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 1px var(--accent-primary); /* Double border effect */
+    box-shadow: 0 0 0 1px var(--accent-primary);
 }
 .calendar-card.skipped {
     border-color: var(--accent-danger);
@@ -171,24 +173,6 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
 }
 .calendar-card.skipped .day-label {
     color: var(--accent-danger);
-}
-
-/* Revert header background changes */
-.calendar-card.completed .calendar-header,
-.calendar-card.skipped .calendar-header {
-    background: var(--bg-secondary);
-    border-bottom-style: dashed;
-    border-bottom-color: var(--border-color);
-}
-
-/* Revert text colors in header */
-.calendar-card.completed .month-label,
-.calendar-card.skipped .month-label {
-    color: var(--text-muted);
-}
-.calendar-card.completed .weekday-label,
-.calendar-card.skipped .weekday-label {
-    color: var(--accent-secondary);
 }
 
 .month-label {
@@ -225,15 +209,16 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: var(--surface-card); /* Solid background */
+  background: var(--surface-card);
 }
 
 .plan-content h3 {
-    font-size: 1.2rem;
-    font-weight: 500;
+    font-size: 1.25rem;
+    font-weight: 600;
     color: var(--text-primary);
     margin-bottom: var(--spacing-sm);
     word-break: break-word;
+    line-height: 1.4;
 }
 .plan-content h3.strike {
     text-decoration: line-through;
@@ -245,16 +230,18 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
+    margin-top: calc(var(--spacing-xs) * -1);
 }
 
 .extra-chip {
-    font-size: 0.75rem;
-    background: rgba(59, 130, 246, 0.15);
+    font-size: 0.8rem;
+    background: rgba(59, 130, 246, 0.12);
     color: var(--accent-secondary);
-    padding: 2px 8px;
+    padding: 4px 12px;
     border-radius: 12px;
     border: 1px solid rgba(59, 130, 246, 0.2);
+    font-weight: 500;
 }
 
 .extras-grid.on-rest {
@@ -268,11 +255,11 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 24px;
+    min-height: 48px; /* Better touch target */
 }
 
 .status-indicator {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: bold;
     color: var(--accent-primary);
     text-transform: uppercase;
@@ -282,17 +269,29 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
     color: var(--accent-danger);
 }
 
-/* Hide edit button unless hovering card */
+/* Actions Visibility */
 .actions-area {
-    opacity: 0;
-    transition: opacity 0.2s;
     position: absolute;
-    bottom: 8px;
-    right: 8px;
+    bottom: 12px;
+    right: 12px;
+    transition: opacity 0.2s;
 }
-.calendar-card:hover .actions-area {
-    opacity: 1;
+
+/* On desktop, hide unless hovering. On mobile, always show. */
+@media (min-width: 1000px) {
+    .actions-area {
+        opacity: 0;
+    }
+    .calendar-card:hover .actions-area {
+        opacity: 1;
+    }
 }
+@media (max-width: 999px) {
+    .actions-area {
+        opacity: 1;
+    }
+}
+
 
 /* Stamp Overlay */
 .stamp-overlay {
