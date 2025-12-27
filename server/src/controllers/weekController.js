@@ -1,10 +1,10 @@
 const store = require('../db/store');
 
-const getWeek = (req, res) => {
+const getWeek = async (req, res) => {
     try {
         const userId = req.user.id;
         const targetDate = req.query.date ? new Date(req.query.date) : new Date();
-        const week = store.getWeek(userId, targetDate);
+        const week = await store.getWeek(userId, targetDate);
         res.json(week);
     } catch (error) {
         console.error("Error fetching week:", error);
@@ -12,13 +12,13 @@ const getWeek = (req, res) => {
     }
 };
 
-const updateDay = (req, res) => {
+const updateDay = async (req, res) => {
     try {
         const userId = req.user.id;
         const { id } = req.params; // id is YYYY-MM-DD
-        const updatedDay = req.body;
+        const data = req.body;
 
-        const result = store.updateDay(userId, id, updatedDay);
+        const result = await store.updateDay(userId, id, data);
 
         if (result) {
             res.json(result);
@@ -35,3 +35,4 @@ module.exports = {
     getWeek,
     updateDay
 };
+
