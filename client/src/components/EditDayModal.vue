@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, reactive, watch } from 'vue';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -8,7 +8,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'save']);
 
-const formState = ref({
+const formState = reactive({
   plannedActivity: '',
   isRestDay: false,
   extras: []
@@ -19,32 +19,36 @@ const newExtra = ref('');
 // Initialize form when modal opens with data
 watch(() => props.dayData, (newData) => {
   if (newData) {
-    formState.value = {
-      plannedActivity: newData.plannedActivity,
-      isRestDay: newData.isRestDay,
-      extras: [...(newData.extras || [])]
-    };
+    formState.plannedActivity = newData.plannedActivity || '';
+    formState.isRestDay = !!newData.isRestDay;
+    formState.extras = [...(newData.extras || [])];
   }
 }, { immediate: true });
 
 const save = () => {
-  emit('save', {
+  // Ensure we send a fresh copy of the whole object
+  const updatedDay = {
     ...props.dayData,
-    ...formState.value
-  });
+    plannedActivity: formState.plannedActivity,
+    isRestDay: formState.isRestDay,
+    extras: [...formState.extras]
+  };
+  
+  emit('save', updatedDay);
   emit('close');
 };
 
 const addExtra = () => {
   if (newExtra.value.trim()) {
-    formState.value.extras.push(newExtra.value.trim());
+    formState.extras.push(newExtra.value.trim());
     newExtra.value = '';
   }
 };
 
 const removeExtra = (index) => {
-  formState.value.extras.splice(index, 1);
+  formState.extras.splice(index, 1);
 };
+
 </script>
 
 <template>

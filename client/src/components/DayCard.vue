@@ -63,14 +63,15 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
       
       <div v-else class="plan-content">
         <h3 :class="{ 'strike': isCompleted }">{{ day.plannedActivity || "No Plan" }}</h3>
-        
-        <!-- Extras chips -->
-        <div v-if="day.extras && day.extras.length > 0" class="extras-grid">
-            <span v-for="(extra, idx) in day.extras" :key="idx" class="extra-chip">
-                {{ extra }}
-            </span>
-        </div>
       </div>
+
+      <!-- Extras chips (always show if present) -->
+      <div v-if="day.extras && day.extras.length > 0" class="extras-grid" :class="{ 'on-rest': isRestDay }">
+          <span v-for="(extra, idx) in day.extras" :key="idx" class="extra-chip">
+              {{ extra }}
+          </span>
+      </div>
+
 
       <!-- Action Footer (hover only or subtle) -->
       <div class="card-footer">
@@ -254,6 +255,10 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
     padding: 2px 8px;
     border-radius: 12px;
     border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.extras-grid.on-rest {
+    margin-top: var(--spacing-sm);
 }
 
 /* Footer / Actions */
