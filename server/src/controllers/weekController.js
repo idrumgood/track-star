@@ -2,8 +2,9 @@ const store = require('../db/store');
 
 const getWeek = (req, res) => {
     try {
+        const userId = req.user.id;
         const targetDate = req.query.date ? new Date(req.query.date) : new Date();
-        const week = store.getWeek(targetDate);
+        const week = store.getWeek(userId, targetDate);
         res.json(week);
     } catch (error) {
         console.error("Error fetching week:", error);
@@ -13,17 +14,15 @@ const getWeek = (req, res) => {
 
 const updateDay = (req, res) => {
     try {
+        const userId = req.user.id;
         const { id } = req.params; // id is YYYY-MM-DD
         const updatedDay = req.body;
 
-        const result = store.updateDay(id, updatedDay);
+        const result = store.updateDay(userId, id, updatedDay);
 
         if (result) {
             res.json(result);
         } else {
-            // Differentiate 404 Week vs 404 Day if needed, but for now generic 404 is okay as per original
-            // Original: 404 Check key, then check index.
-            // Store returns null for both cases.
             res.status(404).json({ error: "Day or Week not found" });
         }
     } catch (error) {

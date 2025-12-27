@@ -22,15 +22,16 @@ const generateWeek = (mondayDate) => {
     return week;
 };
 
-const getWeek = (date) => {
+const getWeek = (userId, date) => {
     const monday = getMonday(date);
-    const key = generateId(monday);
+    const weekKey = generateId(monday);
+    const fullKey = `${userId}:${weekKey}`;
 
-    if (!weeks.has(key)) {
-        weeks.set(key, generateWeek(monday));
+    if (!weeks.has(fullKey)) {
+        weeks.set(fullKey, generateWeek(monday));
     }
 
-    const week = weeks.get(key);
+    const week = weeks.get(fullKey);
 
     // Check for skipped days
     const today = new Date();
@@ -50,15 +51,16 @@ const getWeek = (date) => {
     return week;
 };
 
-const updateDay = (dayId, data) => {
+const updateDay = (userId, dayId, data) => {
     // dayId is YYYY-MM-DD
     const [y, m, d] = dayId.split('-').map(Number);
     const dayDate = new Date(y, m - 1, d);
     const monday = getMonday(dayDate);
-    const key = generateId(monday);
+    const weekKey = generateId(monday);
+    const fullKey = `${userId}:${weekKey}`;
 
-    if (weeks.has(key)) {
-        const week = weeks.get(key);
+    if (weeks.has(fullKey)) {
+        const week = weeks.get(fullKey);
         const index = week.findIndex(d => d.id === dayId);
 
         if (index !== -1) {
