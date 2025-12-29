@@ -122,3 +122,6 @@ dist
 *.njsproj
 *.sln
 *.sw?
+
+.agent
+.agent/
