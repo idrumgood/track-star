@@ -108,6 +108,12 @@ const updateDay = async (userId, dayId, data) => {
         updatedData.status = 'pending';
     }
 
+    // Enforce: Past days that are not completed should be skipped
+    const todayId = generateId(new Date());
+    if (updatedData.id < todayId && updatedData.status === 'pending' && !updatedData.isRestDay) {
+        updatedData.status = 'skipped';
+    }
+
     await dayRef.set(updatedData);
     return updatedData;
 };

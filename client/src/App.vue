@@ -20,6 +20,17 @@ onMounted(async () => {
     } catch (e) {
         console.error("Failed to fetch app config", e);
     }
+
+    // Global 401 handler
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+        const response = await originalFetch(...args);
+        if (response.status === 401 && user.value) {
+            console.warn("Session expired or unauthorized. Logging out...");
+            logout();
+        }
+        return response;
+    };
 });
 
 const initGoogleSignIn = (clientId) => {

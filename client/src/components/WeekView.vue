@@ -47,7 +47,17 @@ const changeWeek = (offset) => {
     fetchWeek();
 };
 
-const completedCount = computed(() => weekDays.value.filter(d => d.status === 'completed' || d.isRestDay).length);
+const completedCount = computed(() => {
+    const todayId = new Date().toISOString().split('T')[0];
+    return weekDays.value.filter(d => {
+        if (d.status === 'completed') return true;
+        if (d.isRestDay) {
+            // Only count rest days if they are today or in the past
+            return d.id <= todayId;
+        }
+        return false;
+    }).length;
+});
 const progressPercent = computed(() => weekDays.value.length ? Math.round((completedCount.value / weekDays.value.length) * 100) : 0);
 
 // Helper to check relative time for the current week view
@@ -98,7 +108,15 @@ const handleToggleComplete = async (id) => {
     if (day) {
         // Optimistic update
         const originalStatus = day.status;
-        day.status = day.status === 'completed' ? 'pending' : 'completed';
+        const todayId = new Date().toISOString().split('T')[0];
+        
+        if (day.status === 'completed') {
+            // Uncompleting
+            day.status = day.id < todayId ? 'skipped' : 'pending';
+        } else {
+            // Completing
+            day.status = 'completed';
+        }
         
         // Sync with server
         try {
