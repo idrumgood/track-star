@@ -9,6 +9,14 @@ const getStats = async (req, res) => {
             return res.status(400).json({ error: "Missing start or end date" });
         }
 
+        // Basic date validation
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            return res.status(400).json({ error: "Invalid start or end date format" });
+        }
+
         const days = await store.getDaysInRange(userId, start, end);
 
         // Aggregation logic
