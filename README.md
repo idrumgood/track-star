@@ -37,6 +37,24 @@ This command uses `concurrently` to launch:
 - **Server**: Runs on `http://localhost:3000`
 - **Client**: Runs on `http://localhost:5173` (or the next available port)
 
+## Testing
+
+You can run unit tests for both the client and server.
+
+### Server Tests (Jest)
+Navigate to the server directory and run the test script:
+```bash
+cd server
+npm test
+```
+
+### Client Tests (Vitest)
+Navigate to the client directory and run the test script:
+```bash
+cd client
+npm test
+```
+
 ## Project Structure
 
 - `/client`: Vue.js frontend application.
