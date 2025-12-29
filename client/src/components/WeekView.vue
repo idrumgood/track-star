@@ -47,6 +47,11 @@ const changeWeek = (offset) => {
     fetchWeek();
 };
 
+const goToday = () => {
+    currentDate.value = new Date();
+    fetchWeek();
+};
+
 const completedCount = computed(() => {
     const todayId = new Date().toISOString().split('T')[0];
     return weekDays.value.filter(d => {
@@ -59,6 +64,18 @@ const completedCount = computed(() => {
     }).length;
 });
 const progressPercent = computed(() => weekDays.value.length ? Math.round((completedCount.value / weekDays.value.length) * 100) : 0);
+
+const weekDateRange = computed(() => {
+    if (!weekDays.value.length) return '';
+    const start = new Date(weekDays.value[0].date);
+    const end = new Date(weekDays.value[6].date);
+    
+    const formatDate = (d) => {
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+    };
+    
+    return `${formatDate(start)} – ${formatDate(end)}`;
+});
 
 // Helper to check relative time for the current week view
 const today = new Date();
@@ -168,17 +185,24 @@ const handleSavePlan = async (updatedDay) => {
   <div class="week-view">
     <header class="header glass-panel">
       <div class="header-content">
-        <div class="nav-controls">
-            <button class="nav-btn" @click="changeWeek(-1)">← Prev</button>
+        <div class="title-group">
             <h1>Weekly Plan</h1>
-            <button class="nav-btn" @click="changeWeek(1)">Next →</button>
+            <span v-if="!isLoading" class="date-range">{{ weekDateRange }}</span>
         </div>
         <div class="stats">
             <span v-if="!isLoading"><span class="highlight">{{ completedCount }}</span> / {{ weekDays.length }} Completed</span>
         </div>
       </div>
-      <div class="progress-track">
-        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+      
+      <div class="nav-row">
+          <div class="nav-controls">
+              <button class="nav-btn" @click="changeWeek(-1)">← Prev</button>
+              <button class="nav-btn today-btn" @click="goToday">Current Week</button>
+              <button class="nav-btn" @click="changeWeek(1)">Next →</button>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+          </div>
       </div>
     </header>
 
@@ -244,6 +268,15 @@ const handleSavePlan = async (updatedDay) => {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.nav-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .nav-btn {
@@ -260,11 +293,38 @@ const handleSavePlan = async (updatedDay) => {
     color: white;
 }
 
+.today-btn {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent-primary);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.today-btn:hover {
+    background: var(--accent-primary);
+    color: white;
+}
+
 .header h1 {
   font-size: 1.5rem;
   color: var(--text-primary);
   margin: 0;
   white-space: nowrap;
+}
+
+.title-group {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-sm);
+}
+
+.date-range {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
 .stats {

@@ -105,4 +105,28 @@ describe('WeekView.vue', () => {
 
         expect(wrapper.vm.weekDays[0].status).toBe('pending');
     });
+
+    it('resets to current date and refetches when goToday is called', async () => {
+        // 1. Initial mount at 2025-12-29
+        vi.setSystemTime(new Date('2025-12-29T12:00:00Z'));
+        wrapper = mount(WeekView, { props: { user } });
+        await flushPromises();
+        expect(fetch).toHaveBeenCalledWith(expect.stringContaining('2025-12-29'), expect.anything());
+
+        // 2. Change week to next week
+        await wrapper.vm.changeWeek(1);
+        await flushPromises();
+        expect(fetch).toHaveBeenCalledWith(expect.stringContaining('2026-01-05'), expect.anything());
+
+        // 3. Move system time slightly (simulate time passing or just ensuring it uses "new Date()")
+        vi.setSystemTime(new Date('2025-12-30T10:00:00Z'));
+
+        // 4. Click Current Week
+        await wrapper.vm.goToday();
+        await flushPromises();
+
+        // 5. Assert it fetches with the new "current" date
+        expect(fetch).toHaveBeenCalledWith(expect.stringContaining('2025-12-30'), expect.anything());
+        expect(wrapper.vm.currentDate.toISOString()).toContain('2025-12-30');
+    });
 });
