@@ -138,6 +138,13 @@ const logout = () => {
       <component :is="Component" :user="user" />
     </router-view>
   </main>
+
+  <footer>
+    <div class="footer-content">
+      <p>&copy; 2025 Bryan Dunk</p>
+      <router-link to="/about" class="footer-link">About</router-link>
+    </div>
+  </footer>
 </template>
 
 <style scoped>
@@ -266,5 +273,88 @@ header {
 .login-prompt p {
     color: var(--text-secondary);
     font-size: 1.1rem;
+}
+
+main {
+    padding-bottom: 80px; /* Space for fixed footer */
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--spacing-md) 0;
+    background: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    z-index: 1000;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.footer-link {
+    color: var(--accent-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+    color: var(--accent-primary);
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
+    }
+
+    .brand {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .logo-img {
+        width: 36px;
+        height: 36px;
+    }
+
+    .logo-text {
+        font-size: 1.5rem;
+    }
+
+    .main-nav {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .nav-item {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .user-controls {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .user-info {
+        font-size: 0.9rem;
+    }
+
+    .login-prompt h2 {
+        font-size: 1.8rem;
+    }
 }
 </style>
