@@ -14,4 +14,16 @@ const generateId = (dateObj) => {
     return `${y}-${m}-${d}`;
 };
 
-module.exports = { getMonday, generateId };
+const getRangeMondays = (start, end) => {
+    const mondays = [];
+    let current = getMonday(start);
+    const last = getMonday(end);
+
+    while (current <= last) {
+        mondays.push(new Date(current));
+        current.setDate(current.getDate() + 7);
+    }
+    return mondays;
+};
+
+module.exports = { getMonday, generateId, getRangeMondays };

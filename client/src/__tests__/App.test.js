@@ -42,7 +42,14 @@ describe('App.vue', () => {
         const user = { id: 'user1', name: 'Test', idToken: 'token' };
         localStorage.setItem('track_star_user', JSON.stringify(user));
 
-        const wrapper = mount(App);
+        const wrapper = mount(App, {
+            global: {
+                stubs: {
+                    'router-link': true,
+                    'router-view': { template: '<div><slot :Component="{}"></slot></div>' }
+                }
+            }
+        });
         await flushPromises();
 
         expect(wrapper.vm.user).toBeTruthy();

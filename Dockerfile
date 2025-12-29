@@ -10,7 +10,7 @@ RUN npm run build
 FROM node:22-alpine AS production-stage
 WORKDIR /app/server
 COPY server/package*.json ./
-RUN npm install --production
+RUN npm install --omit=dev
 COPY server/ .
 
 # Copy built assets from build-stage to expected location

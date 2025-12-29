@@ -1,5 +1,5 @@
 const { Firestore } = require('@google-cloud/firestore');
-const { generateId, getMonday } = require('../utils/dateUtils');
+const { generateId, getMonday, getRangeMondays } = require('../utils/dateUtils');
 
 const db = new Firestore({
     projectId: process.env.GOOGLE_CLOUD_PROJECT,
@@ -118,8 +118,46 @@ const updateDay = async (userId, dayId, data) => {
     return updatedData;
 };
 
+const getDaysInRange = async (userId, startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const startId = generateId(start);
+    const endId = generateId(end);
+
+    const mondays = getRangeMondays(start, end);
+    let allDays = [];
+
+    // Fetch all weeks in parallel
+    const weekPromises = mondays.map(async (monday) => {
+        const weekKey = generateId(monday);
+        const daysCollection = db.collection('users').doc(userId)
+            .collection('weeks').doc(weekKey)
+            .collection('days');
+
+        const snapshot = await daysCollection.get();
+        if (snapshot.empty) {
+            // Note: If a week doesn't exist, we skip it for now.
+            // In a real app we might want to generate it, but for stats
+            // only historical data usually matters.
+            return [];
+        }
+        return snapshot.docs.map(doc => doc.data());
+    });
+
+    const weeks = await Promise.all(weekPromises);
+    weeks.forEach(week => {
+        allDays = allDays.concat(week);
+    });
+
+    // Filter to exact range and sort
+    return allDays
+        .filter(day => day.id >= startId && day.id <= endId)
+        .sort((a, b) => a.id.localeCompare(b.id));
+};
+
 module.exports = {
     getWeek,
-    updateDay
+    updateDay,
+    getDaysInRange
 };
 
