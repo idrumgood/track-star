@@ -25,8 +25,11 @@ const stats = ref(null);
 const isLoading = ref(true);
 
 // Default range: last 30 days
-const endDate = ref(new Date().toISOString().split('T')[0]);
-const startDate = ref(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+const defaultEndDate = new Date().toISOString().split('T')[0];
+const defaultStartDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+const endDate = ref(sessionStorage.getItem('stats_end_date') || defaultEndDate);
+const startDate = ref(sessionStorage.getItem('stats_start_date') || defaultStartDate);
 
 const fetchStats = async () => {
     if (!props.user) return;
@@ -46,7 +49,11 @@ const fetchStats = async () => {
 };
 
 onMounted(fetchStats);
-watch([startDate, endDate], fetchStats);
+watch([startDate, endDate], () => {
+    sessionStorage.setItem('stats_start_date', startDate.value);
+    sessionStorage.setItem('stats_end_date', endDate.value);
+    fetchStats();
+});
 
 // Chart Data: Activity Distribution
 const activityChartData = computed(() => {

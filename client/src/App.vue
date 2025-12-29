@@ -47,7 +47,7 @@ const initGoogleSignIn = (clientId) => {
                 if (container && !user.value) {
                     window.google.accounts.id.renderButton(
                         container,
-                        { theme: 'outline', size: 'large', type: 'standard', shape: 'pill' }
+                        { theme: 'filled_black', size: 'large', type: 'standard', shape: 'pill' }
                     );
                 }
             });
@@ -92,7 +92,7 @@ const logout = () => {
             btnContainers.forEach(container => {
                 window.google.accounts.id.renderButton(
                     container,
-                    { theme: 'outline', size: 'large', type: 'standard', shape: 'pill' }
+                    { theme: 'filled_black', size: 'large', type: 'standard', shape: 'pill' }
                 );
             });
             window.google.accounts.id.prompt(); // Re-show prompt if applicable
@@ -413,6 +413,16 @@ footer {
 
     .login-prompt h2 {
         font-size: 1.8rem;
+    }
+
+    main {
+        padding-bottom: 0;
+    }
+
+    footer {
+        position: static;
+        background: var(--bg-primary);
+        padding: var(--spacing-xl) 0;
     }
 }
 
