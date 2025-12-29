@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import WeekView from './components/WeekView.vue';
 
 const user = ref(null);
 
@@ -108,6 +107,12 @@ const logout = () => {
         <img src="/logo.svg" alt="Track Star Logo" class="logo-img" />
         <div class="logo-text">Track Star</div>
     </div>
+
+    <nav v-if="user" class="main-nav">
+        <router-link to="/" class="nav-item" active-class="active">Plan</router-link>
+        <router-link to="/stats" class="nav-item" active-class="active">Stats</router-link>
+    </nav>
+
     <div class="user-controls">
         <div v-if="user" class="user-info">
             <img v-if="user.picture" :src="user.picture" class="user-avatar" />
@@ -128,7 +133,10 @@ const logout = () => {
             <div class="google-btn-container"></div>
         </div>
     </div>
-    <WeekView v-else :user="user" />
+    
+    <router-view v-else v-slot="{ Component }">
+      <component :is="Component" :user="user" />
+    </router-view>
   </main>
 </template>
 
@@ -165,6 +173,35 @@ header {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
+}
+
+.main-nav {
+    display: flex;
+    gap: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.nav-item {
+    text-decoration: none;
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active {
+    color: var(--accent-primary);
+    background: rgba(16, 185, 129, 0.1);
 }
 
 .user-info {

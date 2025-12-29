@@ -1,6 +1,12 @@
 # Track Star
 
-Track Star is a weekly workout planning application designed to help you organize your fitness routine.
+Track Star is a weekly workout planning and analytics application designed to help you organize your fitness routine and track your progress over time.
+
+## Features
+
+- **Weekly Planning**: Plan and track your daily workouts.
+- **Progress Tracking**: Visualize your consistency with the new Stats Dashboard.
+- **Automatic Streaks**: Keep motivated with streak tracking.
 
 ## Tech Stack
 
