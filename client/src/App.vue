@@ -142,7 +142,11 @@ const logout = () => {
   <footer>
     <div class="footer-content">
       <p>&copy; 2025 Bryan Dunk</p>
-      <router-link to="/about" class="footer-link">About</router-link>
+      <div class="footer-links">
+        <router-link to="/about" class="footer-link">About</router-link>
+        <span class="divider">•</span>
+        <router-link to="/legal" class="footer-link">Legal</router-link>
+      </div>
     </div>
   </footer>
 </template>
@@ -299,6 +303,18 @@ footer {
     flex-direction: column;
     align-items: center;
     gap: var(--spacing-xs);
+}
+
+.footer-links {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.divider {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    user-select: none;
 }
 
 .footer-link {
