@@ -232,6 +232,32 @@ describe('store.js', () => {
                 })
             }));
         });
+
+        test('should sanitize activity names and extras (strip HTML and trim)', async () => {
+            const today = new Date();
+            const todayId = generateId(today);
+
+            prisma.day.findUnique.mockResolvedValue({ id: `user1_${todayId}`, userId: 'user1', date: today, extras: [] });
+            prisma.activityType.findFirst.mockResolvedValue(null);
+
+            await store.updateDay('user1', todayId, {
+                plannedActivity: '  <b>Heavy</b> Lift <script>alert(1)</script>  ',
+                extras: [' <img src=x onerror=alert(1)> Walk ', '  ']
+            });
+
+            expect(prisma.day.update).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({
+                    plannedActivityRaw: 'Heavy Lift'
+                })
+            }));
+
+            expect(prisma.extra.createMany).toHaveBeenCalledWith({
+                data: [
+                    { dayId: `user1_${todayId}`, name: 'Walk' }
+                    // Note: the empty '  ' should be filtered out
+                ]
+            });
+        });
     });
 
     describe('getWeek', () => {
