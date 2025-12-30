@@ -25,7 +25,11 @@ This will:
 To test the container locally:
 
 ```bash
-docker run -p 3000:3000 track-star
+docker run -p 3000:3000 \
+  -e DATABASE_URL="postgresql://postgres:urlencoded-password@host.docker.internal:5432/postgres" \
+  -e DATABASE_PASSWORD="urlencoded-password" \
+  -e GOOGLE_CLIENT_ID="your-google-id" \
+  track-star
 ```
 
 - Access the app at `http://localhost:3000`.
@@ -34,6 +38,19 @@ docker run -p 3000:3000 track-star
 ### Stopping the Container
 - **Foreground**: Press `Ctrl + C`.
 - **Background**: Run `docker ps` to get the ID, then `docker stop <CONTAINER_ID>`.
+
+### Local Development (Cloud SQL)
+
+When running the app locally (outside of Docker) or running Prisma commands, you must start the database proxy to establish a secure tunnel:
+
+```bash
+cd server
+node scripts/db-proxy.js
+```
+
+Keep this running in a separate terminal. The application will connect to `localhost:5432` (or `host.docker.internal:5432` if in Docker). 
+
+**Note**: The proxy binds to `0.0.0.0` to ensure Docker containers can reach it.
 
 ## 3. Deploy to Google Cloud Run
 
@@ -51,7 +68,7 @@ docker run -p 3000:3000 track-star
 
 
 3.  **Deploy to Cloud Run**:
-    Pass the necessary environment variables for Firestore and Google Auth:
+    Pass the necessary environment variables for Google Auth and Cloud SQL:
 
     ```bash
     gcloud run deploy track-star \
@@ -59,7 +76,8 @@ docker run -p 3000:3000 track-star
       --platform managed \
       --region us-central1 \
       --allow-unauthenticated \
-      --set-env-vars="GOOGLE_CLOUD_PROJECT=[PROJECT-ID],FIRESTORE_DATABASE_ID=[DATABASE-ID],GOOGLE_CLIENT_ID=[GOOGLE-CLIENT-ID]"
+      --add-cloudsql-instances=[PROJECT-ID]:us-central1:track-star-db \
+      --set-env-vars="GOOGLE_CLOUD_PROJECT=[PROJECT-ID],DATABASE_PASSWORD=[YOUR_DATABASE_PASSWORD],GOOGLE_CLIENT_ID=[GOOGLE-CLIENT-ID]"
     ```
 
 ## 4. Google Cloud Console Configuration
@@ -74,8 +92,10 @@ After deploying, you must update your Google Cloud Console settings to allow the
 4.  (Optional but recommended) Add the same URL to **Authorized redirect URIs**.
 5.  Save the changes.
 
-### Firestore
-Ensure the **Firestore API** is enabled for your project and that the Cloud Run service account has the **Cloud Datastore User** role (or similar) if you encounter permission errors.
+### Database (Cloud SQL)
+1. Ensure the **Cloud SQL Admin API** is enabled for your project.
+2. The Cloud Run service account must have the **Cloud SQL Client** role.
+3. If running Prisma migrations manually, use the `db-proxy.js` script.
 
 
 ## Troubleshooting

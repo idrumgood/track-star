@@ -12,6 +12,7 @@ WORKDIR /app/server
 COPY server/package*.json ./
 RUN npm install --omit=dev
 COPY server/ .
+RUN npx prisma generate
 
 # Copy built assets from build-stage to expected location
 # We are currently in /app/server
