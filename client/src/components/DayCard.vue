@@ -62,7 +62,10 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
       </div>
       
       <div v-else class="plan-content">
-        <h3 :class="{ 'strike': isCompleted }">{{ day.plannedActivity || "No Plan" }}</h3>
+        <div class="activity-display">
+          <span v-if="day.activityType?.icon" class="activity-icon">{{ day.activityType.icon }}</span>
+          <h3 :class="{ 'strike': isCompleted }">{{ day.plannedActivity || "No Plan" }}</h3>
+        </div>
       </div>
 
       <!-- Extras chips (always show if present) -->
@@ -219,6 +222,16 @@ const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
     margin-bottom: var(--spacing-sm);
     word-break: break-word;
     line-height: 1.4;
+}
+.activity-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.activity-icon {
+    font-size: 2rem;
+    line-height: 1;
 }
 .plan-content h3.strike {
     text-decoration: line-through;

@@ -1,5 +1,6 @@
 const prisma = require('./prisma');
 const { generateId, getMonday, getRangeMondays } = require('../utils/dateUtils');
+const { sanitizeString, sanitizeArray } = require('../utils/sanitize');
 
 const ensureUser = async (userId) => {
     return prisma.user.upsert({
@@ -126,8 +127,45 @@ const updateDay = async (userId, dayDateId, data) => {
 
     const updateData = {};
     if (data.plannedActivity !== undefined) {
-        updateData.plannedActivityRaw = data.plannedActivity;
-        // In the future, we would look up activityType here
+        const sanitizedActivity = sanitizeString(data.plannedActivity);
+        updateData.plannedActivityRaw = sanitizedActivity;
+
+        // Lookup activityType by name (global or user-specific)
+        let activityType = await prisma.activityType.findFirst({
+            where: {
+                name: { equals: sanitizedActivity, mode: 'insensitive' },
+                OR: [
+                    { userId: null },
+                    { userId: userId }
+                ]
+            }
+        });
+
+        // If not found and it's not the default "Plan", create a user-specific one
+        if (!activityType && sanitizedActivity.trim() !== "" && sanitizedActivity !== "Plan") {
+            try {
+                activityType = await prisma.activityType.create({
+                    data: {
+                        name: sanitizedActivity,
+                        userId: userId
+                    }
+                });
+            } catch (e) {
+                // In case of a race condition where it was JUST created
+                activityType = await prisma.activityType.findFirst({
+                    where: {
+                        name: sanitizedActivity,
+                        userId: userId
+                    }
+                });
+            }
+        }
+
+        if (activityType) {
+            updateData.activityTypeId = activityType.id;
+        } else {
+            updateData.activityTypeId = null;
+        }
     }
     if (data.isRestDay !== undefined) updateData.isRestDay = data.isRestDay;
     if (data.status !== undefined) updateData.status = data.status;
@@ -149,10 +187,11 @@ const updateDay = async (userId, dayDateId, data) => {
 
     // Handle extras
     if (data.extras !== undefined) {
+        const sanitizedExtras = sanitizeArray(data.extras);
         // Simple strategy: delete and recreate extras
         await prisma.extra.deleteMany({ where: { dayId } });
         await prisma.extra.createMany({
-            data: data.extras.map(name => ({ dayId, name }))
+            data: sanitizedExtras.map(name => ({ dayId, name }))
         });
     }
 
