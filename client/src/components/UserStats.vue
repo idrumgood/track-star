@@ -91,9 +91,9 @@ const weeklyProgressData = computed(() => {
     stats.value.rawDays.forEach(day => {
         // Simple week grouping by index or date floor
         const d = new Date(day.date);
-        const dayOfWeek = d.getDay();
-        const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        const monday = new Date(d.setDate(diff)).toISOString().split('T')[0];
+        const dayOfWeek = d.getUTCDay();
+        const diff = d.getUTCDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff)).toISOString().split('T')[0];
         
         if (!weeks[monday]) weeks[monday] = { completed: 0, total: 0 };
         if (!day.isRestDay) {

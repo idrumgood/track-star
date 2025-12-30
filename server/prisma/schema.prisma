@@ -1,0 +1,55 @@
+generator client {
+  provider     = "prisma-client-js"
+  output       = "../src/generated/client"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String         @id // Google User ID
+  email      String?        @unique
+  createdAt  DateTime       @default(now())
+  activities ActivityType[]
+  days       Day[]
+
+  @@map("users")
+}
+
+model ActivityType {
+  id     Int     @id @default(autoincrement())
+  name   String
+  userId String? @map("user_id")
+  icon   String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days   Day[]
+
+  @@unique([name, userId])
+  @@map("activity_types")
+}
+
+model Day {
+  id                 String        @id // format: userId_YYYY-MM-DD
+  userId             String        @map("user_id")
+  date               DateTime      @db.Date
+  activityTypeId     Int?          @map("activity_type_id")
+  plannedActivityRaw String?       @map("planned_activity_raw")
+  isRestDay          Boolean       @default(false) @map("is_rest_day")
+  status             String        @default("pending")
+  user               User          @relation(fields: [userId], references: [id])
+  activityType       ActivityType? @relation(fields: [activityTypeId], references: [id])
+  extras             Extra[]
+
+  @@map("days")
+}
+
+model Extra {
+  id    Int    @id @default(autoincrement())
+  dayId String @map("day_id")
+  name  String
+  day   Day    @relation(fields: [dayId], references: [id])
+
+  @@map("extras")
+}

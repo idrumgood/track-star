@@ -24,8 +24,8 @@ const isSkipped = computed(() => props.day.status === 'skipped');
 
 // Extract parts of the date
 const dateObj = computed(() => new Date(props.day.date));
-const dayNumber = computed(() => dateObj.value.getDate());
-const monthShort = computed(() => dateObj.value.toLocaleString('default', { month: 'short' }));
+const dayNumber = computed(() => dateObj.value.getUTCDate());
+const monthShort = computed(() => dateObj.value.toLocaleString('default', { month: 'short', timeZone: 'UTC' }));
 const dayNameFull = computed(() => props.day.dayName); // e.g. "Monday"
 
 </script>

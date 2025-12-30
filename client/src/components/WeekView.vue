@@ -53,7 +53,7 @@ const goToday = () => {
 };
 
 const completedCount = computed(() => {
-    const todayId = new Date().toISOString().split('T')[0];
+    const todayId = getLocalDayStr(new Date());
     return weekDays.value.filter(d => {
         if (d.status === 'completed') return true;
         if (d.isRestDay) {
@@ -71,30 +71,34 @@ const weekDateRange = computed(() => {
     const end = new Date(weekDays.value[6].date);
     
     const formatDate = (d) => {
-        return `${d.getMonth() + 1}/${d.getDate()}`;
+        return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
     };
     
     return `${formatDate(start)} – ${formatDate(end)}`;
 });
 
 // Helper to check relative time for the current week view
-const today = new Date();
-today.setHours(0,0,0,0);
+const getLocalDayStr = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
 
 const isPastWeek = computed(() => {
     if (!weekDays.value.length) return false;
-    // Check if the last day of the week is before today
-    const lastDay = new Date(weekDays.value[6].date);
-    return lastDay < today;
+    const todayStr = getLocalDayStr(new Date());
+    // Get the Saturday of the displayed week
+    const lastDayStr = weekDays.value[6].id.split('_')[1];
+    return lastDayStr < todayStr;
 });
 
 const isFutureWeek = computed(() => {
     if (!weekDays.value.length) return false;
-    // Check if the first day of the week is after today
-    const firstDay = new Date(weekDays.value[0].date);
-    // Use > (greater than) to allow "Current Week" (where Monday <= today) to be editable
-    // Actually if Monday is tomorrow, it IS a future week.
-    return firstDay > today;
+    const todayStr = getLocalDayStr(new Date());
+    // Get the Monday of the displayed week
+    const firstDayStr = weekDays.value[0].id.split('_')[1];
+    return firstDayStr > todayStr;
 });
 
 const updateDay = async (day) => {
@@ -125,7 +129,7 @@ const handleToggleComplete = async (id) => {
     if (day) {
         // Optimistic update
         const originalStatus = day.status;
-        const todayId = new Date().toISOString().split('T')[0];
+        const todayId = getLocalDayStr(new Date());
         
         if (day.status === 'completed') {
             // Uncompleting
