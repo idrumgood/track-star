@@ -37,6 +37,13 @@ const fetchActivities = async () => {
 
 onMounted(fetchActivities);
 
+// Refetch activities when modal opens to catch newly created custom ones
+watch(() => props.isOpen, (newVal) => {
+    if (newVal) {
+        fetchActivities();
+    }
+});
+
 const filteredActivities = computed(() => {
     const query = formState.plannedActivity.toLowerCase().trim();
     if (!query || !showSuggestions.value) return [];

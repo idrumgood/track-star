@@ -127,18 +127,38 @@ const updateDay = async (userId, dayDateId, data) => {
     const updateData = {};
     if (data.plannedActivity !== undefined) {
         updateData.plannedActivityRaw = data.plannedActivity;
-        
+
         // Lookup activityType by name (global or user-specific)
-        const activityType = await prisma.activityType.findFirst({
+        let activityType = await prisma.activityType.findFirst({
             where: {
-                name: data.plannedActivity,
+                name: { equals: data.plannedActivity, mode: 'insensitive' },
                 OR: [
                     { userId: null },
                     { userId: userId }
                 ]
             }
         });
-        
+
+        // If not found and it's not the default "Plan", create a user-specific one
+        if (!activityType && data.plannedActivity.trim() !== "" && data.plannedActivity !== "Plan") {
+            try {
+                activityType = await prisma.activityType.create({
+                    data: {
+                        name: data.plannedActivity,
+                        userId: userId
+                    }
+                });
+            } catch (e) {
+                // In case of a race condition where it was JUST created
+                activityType = await prisma.activityType.findFirst({
+                    where: {
+                        name: data.plannedActivity,
+                        userId: userId
+                    }
+                });
+            }
+        }
+
         if (activityType) {
             updateData.activityTypeId = activityType.id;
         } else {

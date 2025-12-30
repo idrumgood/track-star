@@ -15,6 +15,12 @@ jest.mock('../src/db/prisma', () => ({
     extra: {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
+    },
+    activityType: {
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        findMany: jest.fn(),
     }
 }));
 
@@ -125,6 +131,106 @@ describe('store.js', () => {
             const result = await store.updateDay('user1', yesterdayId, { status: 'pending' });
 
             expect(result.status).toBe('pending');
+        });
+    });
+
+    describe('updateDay - Activity Matching', () => {
+        test('should match an existing global activity (case-insensitive)', async () => {
+            const today = new Date();
+            const todayId = generateId(today);
+
+            prisma.day.findUnique.mockResolvedValue({
+                id: `user1_${todayId}`,
+                userId: 'user1',
+                date: today,
+                status: 'pending',
+                isRestDay: false,
+                plannedActivityRaw: 'Plan',
+                extras: []
+            });
+
+            // Mock finding a global activity
+            prisma.activityType.findFirst.mockResolvedValue({
+                id: 10,
+                name: 'Running',
+                userId: null,
+                icon: '🏃'
+            });
+
+            await store.updateDay('user1', todayId, { plannedActivity: 'running' });
+
+            expect(prisma.activityType.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+                where: expect.objectContaining({
+                    name: expect.objectContaining({ mode: 'insensitive' })
+                })
+            }));
+
+            expect(prisma.day.update).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({
+                    plannedActivityRaw: 'running',
+                    activityTypeId: 10
+                })
+            }));
+
+            // Should NOT have created a new activity
+            expect(prisma.activityType.create).not.toHaveBeenCalled();
+        });
+
+        test('should create a new user-specific activity if no match found', async () => {
+            const today = new Date();
+            const todayId = generateId(today);
+
+            prisma.day.findUnique.mockResolvedValue({
+                id: `user1_${todayId}`,
+                userId: 'user1',
+                date: today,
+                status: 'pending',
+                isRestDay: false,
+                plannedActivityRaw: 'Plan',
+                extras: []
+            });
+
+            // Mock finding nothing
+            prisma.activityType.findFirst.mockResolvedValue(null);
+
+            // Mock creation success
+            prisma.activityType.create.mockResolvedValue({
+                id: 99,
+                name: 'Unicycling',
+                userId: 'user1'
+            });
+
+            await store.updateDay('user1', todayId, { plannedActivity: 'Unicycling' });
+
+            expect(prisma.activityType.create).toHaveBeenCalledWith({
+                data: {
+                    name: 'Unicycling',
+                    userId: 'user1'
+                }
+            });
+
+            expect(prisma.day.update).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({
+                    activityTypeId: 99
+                })
+            }));
+        });
+
+        test('should NOT create a new activity for default "Plan" text', async () => {
+            const today = new Date();
+            const todayId = generateId(today);
+
+            prisma.day.findUnique.mockResolvedValue({ id: `user1_${todayId}`, userId: 'user1', date: today, extras: [] });
+            prisma.activityType.findFirst.mockResolvedValue(null);
+
+            await store.updateDay('user1', todayId, { plannedActivity: 'Plan' });
+
+            expect(prisma.activityType.create).not.toHaveBeenCalled();
+            expect(prisma.day.update).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({
+                    activityTypeId: null
+                })
+            }));
         });
     });
 
