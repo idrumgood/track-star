@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, watch } from 'vue';
+import { ref, reactive, watch, computed, onMounted } from 'vue';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -15,6 +15,47 @@ const formState = reactive({
 });
 
 const newExtra = ref('');
+const availableActivities = ref([]);
+const showSuggestions = ref(false);
+
+const fetchActivities = async () => {
+    try {
+        const savedUser = localStorage.getItem('track_star_user');
+        if (!savedUser) return;
+        const { idToken } = JSON.parse(savedUser);
+        
+        const res = await fetch('/api/activities', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (res.ok) {
+            availableActivities.value = await res.json();
+        }
+    } catch (err) {
+        console.error('Failed to fetch activities:', err);
+    }
+};
+
+onMounted(fetchActivities);
+
+const filteredActivities = computed(() => {
+    const query = formState.plannedActivity.toLowerCase().trim();
+    if (!query || !showSuggestions.value) return [];
+    return availableActivities.value.filter(a => 
+        a.name.toLowerCase().includes(query) && 
+        a.name.toLowerCase() !== query
+    ).slice(0, 5);
+});
+
+const selectActivity = (activity) => {
+    formState.plannedActivity = activity.name;
+    showSuggestions.value = false;
+};
+
+const hideSuggestions = () => {
+    setTimeout(() => {
+        showSuggestions.value = false;
+    }, 200);
+};
 
 // Initialize form when modal opens with data
 watch(() => props.dayData, (newData) => {
@@ -67,12 +108,27 @@ const removeExtra = (index) => {
 
         <div class="form-group" :class="{ disabled: formState.isRestDay }">
           <label>Planned Activity</label>
-          <input 
-            type="text" 
-            v-model="formState.plannedActivity" 
-            placeholder="e.g. 5k Run, Upper Body Lift..."
-            :disabled="formState.isRestDay"
-          >
+          <div class="autocomplete-wrapper">
+            <input 
+              type="text" 
+              v-model="formState.plannedActivity" 
+              placeholder="e.g. 5k Run, Upper Body Lift..."
+              :disabled="formState.isRestDay"
+              @focus="showSuggestions = true"
+              @blur="hideSuggestions"
+            >
+            <div v-if="filteredActivities.length" class="suggestions glass-panel">
+              <div 
+                v-for="activity in filteredActivities" 
+                :key="activity.id"
+                class="suggestion-item"
+                @click="selectActivity(activity)"
+              >
+                <span class="suggestion-icon">{{ activity.icon }}</span>
+                <span class="suggestion-name">{{ activity.name }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -207,6 +263,46 @@ input[type="text"]:focus {
   border-color: var(--accent-secondary);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
   background: rgba(15, 23, 42, 0.5);
+}
+
+.autocomplete-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  z-index: 10;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+.suggestion-item {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.suggestion-item:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.suggestion-icon {
+  font-size: 1.2rem;
+}
+
+.suggestion-name {
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .extras-list {

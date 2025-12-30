@@ -127,7 +127,23 @@ const updateDay = async (userId, dayDateId, data) => {
     const updateData = {};
     if (data.plannedActivity !== undefined) {
         updateData.plannedActivityRaw = data.plannedActivity;
-        // In the future, we would look up activityType here
+        
+        // Lookup activityType by name (global or user-specific)
+        const activityType = await prisma.activityType.findFirst({
+            where: {
+                name: data.plannedActivity,
+                OR: [
+                    { userId: null },
+                    { userId: userId }
+                ]
+            }
+        });
+        
+        if (activityType) {
+            updateData.activityTypeId = activityType.id;
+        } else {
+            updateData.activityTypeId = null;
+        }
     }
     if (data.isRestDay !== undefined) updateData.isRestDay = data.isRestDay;
     if (data.status !== undefined) updateData.status = data.status;
