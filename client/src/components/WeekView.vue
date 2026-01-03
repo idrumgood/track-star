@@ -17,6 +17,7 @@ const currentDate = ref(new Date());
 const API_URL = '/api';
 
 const isLoading = ref(true);
+const error = ref(null);
 
 const fetchWeek = async () => {
     if (!props.user) return;
@@ -27,9 +28,13 @@ const fetchWeek = async () => {
         });
         if (res.ok) {
             weekDays.value = await res.json();
+            error.value = null;
+        } else {
+            error.value = "Failed to load your week. Your session might have expired.";
         }
     } catch (e) {
         console.error("Failed to fetch week", e);
+        error.value = "Unable to connect to the server. Please check your internet connection.";
     } finally {
         isLoading.value = false;
     }
@@ -210,7 +215,14 @@ const handleSavePlan = async (updatedDay) => {
       </div>
     </header>
 
-    <div v-if="isLoading" class="grid-container">
+    <div v-if="error" class="error-container glass-panel">
+        <div class="error-icon">⚠️</div>
+        <h3>Oops! Something went wrong</h3>
+        <p>{{ error }}</p>
+        <button class="retry-btn" @click="fetchWeek">Try Again</button>
+    </div>
+
+    <div v-else-if="isLoading" class="grid-container">
         <div v-for="n in 7" :key="n" class="day-card glass-panel skeleton-card">
             <div class="skeleton-header"></div>
             <div class="skeleton-body"></div>
@@ -464,5 +476,43 @@ const handleSavePlan = async (updatedDay) => {
   0% { opacity: 0.3; }
   50% { opacity: 0.6; }
   100% { opacity: 0.3; }
+}
+
+.error-container {
+    padding: var(--spacing-xxl);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin: var(--spacing-xl) 0;
+}
+
+.error-icon {
+    font-size: 3rem;
+}
+
+.error-container h3 {
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.error-container p {
+    color: var(--text-secondary);
+    max-width: 400px;
+    margin: 0;
+}
+
+.retry-btn {
+    background: var(--accent-primary);
+    color: white;
+    padding: 10px 24px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    margin-top: var(--spacing-sm);
+}
+
+.retry-btn:hover {
+    filter: brightness(1.1);
 }
 </style>

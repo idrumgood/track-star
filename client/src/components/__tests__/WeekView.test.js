@@ -129,4 +129,46 @@ describe('WeekView.vue', () => {
         expect(fetch).toHaveBeenCalledWith(expect.stringContaining('2025-12-30'), expect.anything());
         expect(wrapper.vm.currentDate.toISOString()).toContain('2025-12-30');
     });
+
+    it('displays error message when fetch fails', async () => {
+        fetch.mockResolvedValueOnce({
+            ok: false,
+            status: 500
+        });
+
+        wrapper = mount(WeekView, {
+            props: { user }
+        });
+
+        await flushPromises();
+
+        expect(wrapper.find('.error-container').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Failed to load your week');
+    });
+
+    it('retries fetch when "Try Again" is clicked', async () => {
+        fetch.mockResolvedValueOnce({
+            ok: false,
+            status: 500
+        });
+
+        wrapper = mount(WeekView, {
+            props: { user }
+        });
+
+        await flushPromises();
+        expect(wrapper.find('.error-container').exists()).toBe(true);
+
+        // Mock success for retry
+        fetch.mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(mockDays)
+        });
+
+        await wrapper.find('.retry-btn').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.find('.error-container').exists()).toBe(false);
+        expect(wrapper.vm.weekDays.length).toBe(7);
+    });
 });

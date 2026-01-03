@@ -7,6 +7,18 @@ onMounted(async () => {
     const savedUser = localStorage.getItem('track_star_user');
     if (savedUser) {
         user.value = JSON.parse(savedUser);
+        
+        // Optional: Proactively check if token is expired
+        try {
+            const payload = JSON.parse(atob(user.value.idToken.split('.')[1]));
+            const now = Math.floor(Date.now() / 1000);
+            if (payload.exp && payload.exp < now) {
+                console.warn("Cached token expired. Clearing session.");
+                logout();
+            }
+        } catch (e) {
+            console.error("Failed to parse token", e);
+        }
     }
     
     // Fetch dynamic config from backend
@@ -19,17 +31,6 @@ onMounted(async () => {
     } catch (e) {
         console.error("Failed to fetch app config", e);
     }
-
-    // Global 401 handler
-    const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-        const response = await originalFetch(...args);
-        if (response.status === 401 && user.value) {
-            console.warn("Session expired or unauthorized. Logging out...");
-            logout();
-        }
-        return response;
-    };
 });
 
 const initGoogleSignIn = (clientId) => {
@@ -52,10 +53,9 @@ const initGoogleSignIn = (clientId) => {
                 }
             });
             
-            // Optional: Also display the One Tap prompt
-            if (!user.value) {
-                window.google.accounts.id.prompt();
-            }
+            // Always call prompt() - Google handles the logic of whether to show it
+            // This allows for silent re-authentication (refreshing the token)
+            window.google.accounts.id.prompt();
         } else {
             // Script might still be loading, retry in 100ms
             setTimeout(tryInit, 100);
@@ -78,8 +78,15 @@ const handleCredentialResponse = (response) => {
         idToken: response.credential
     };
     
-    user.value = newUser;
-    localStorage.setItem('track_star_user', JSON.stringify(newUser));
+    // If we already have a user but the token changed, just update it
+    if (user.value && user.value.id === newUser.id) {
+        console.log("Token refreshed successfully");
+        user.value = { ...user.value, ...newUser };
+    } else {
+        user.value = newUser;
+    }
+    
+    localStorage.setItem('track_star_user', JSON.stringify(user.value));
 };
 
 const logout = () => {
