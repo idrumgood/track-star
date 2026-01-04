@@ -1,20 +1,9 @@
-const prisma = require('../db/prisma');
+const store = require('../db/store');
 
 const getActivities = async (req, res) => {
     try {
         const userId = req.user.id;
-
-        // Fetch global activities (userId is null) AND user-specific activities
-        const activities = await prisma.activityType.findMany({
-            where: {
-                OR: [
-                    { userId: null },
-                    { userId: userId }
-                ]
-            },
-            orderBy: { name: 'asc' }
-        });
-
+        const activities = await store.getActivities(userId);
         res.json(activities);
     } catch (error) {
         console.error("Error fetching activities:", error);

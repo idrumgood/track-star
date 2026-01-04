@@ -11,15 +11,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@google-cloud/cloud-sql-connector": "^1.8.5",
-    "@prisma/adapter-pg": "^7.2.0",
-    "@prisma/client": "^7.2.0",
+    "@google-cloud/firestore": "^7.11.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "google-auth-library": "^10.5.0",
-    "pg": "^8.16.3",
-    "prisma": "^7.2.0"
+    "google-auth-library": "^10.5.0"
   },
   "devDependencies": {
     "jest": "^30.2.0",

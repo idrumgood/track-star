@@ -1,10 +1,8 @@
 const { getActivities } = require('../src/controllers/activityController');
-const prisma = require('../src/db/prisma');
+const store = require('../src/db/store');
 
-jest.mock('../src/db/prisma', () => ({
-    activityType: {
-        findMany: jest.fn(),
-    },
+jest.mock('../src/db/store', () => ({
+    getActivities: jest.fn(),
 }));
 
 describe('activityController.js', () => {
@@ -27,24 +25,16 @@ describe('activityController.js', () => {
             { id: 2, name: 'Custom Lift', userId: 'user1' }
         ];
 
-        prisma.activityType.findMany.mockResolvedValue(mockActivities);
+        store.getActivities.mockResolvedValue(mockActivities);
 
         await getActivities(req, res);
 
-        expect(prisma.activityType.findMany).toHaveBeenCalledWith({
-            where: {
-                OR: [
-                    { userId: null },
-                    { userId: 'user1' }
-                ]
-            },
-            orderBy: { name: 'asc' }
-        });
+        expect(store.getActivities).toHaveBeenCalledWith('user1');
         expect(res.json).toHaveBeenCalledWith(mockActivities);
     });
 
     test('getActivities should handle errors', async () => {
-        prisma.activityType.findMany.mockRejectedValue(new Error('DB Error'));
+        store.getActivities.mockRejectedValue(new Error('DB Error'));
 
         await getActivities(req, res);
 

@@ -1,250 +1,250 @@
-const prisma = require('./prisma');
-const { generateId, getMonday, getRangeMondays } = require('../utils/dateUtils');
+const db = require('./firestore');
+const { generateId, getMonday, getMonthDocPath } = require('../utils/dateUtils');
 const { sanitizeString, sanitizeArray } = require('../utils/sanitize');
 
+const mapFirestoreDay = (dateId, dayData) => {
+    const date = new Date(dayData.date || `${dateId}T12:00:00Z`);
+    return {
+        id: dateId,
+        date: dayData.date || date.toISOString(),
+        dayName: date.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }),
+        plannedActivity: dayData.plannedActivityRaw,
+        isRestDay: dayData.isRestDay || false,
+        status: dayData.status || 'pending',
+        extras: dayData.extras || []
+    };
+};
+
 const ensureUser = async (userId) => {
-    return prisma.user.upsert({
-        where: { id: userId },
-        update: {},
-        create: { id: userId }
-    });
+    // In Firestore, we can just ensure the user document exists if we want to store metadata
+    // For now, we'll just return the ID
+    return { id: userId };
 };
 
 const generateWeekData = (userId, mondayDate) => {
-    const week = [];
+    const week = {};
     for (let i = 0; i < 7; i++) {
         const d = new Date(mondayDate);
         d.setUTCDate(mondayDate.getUTCDate() + i);
-        const dayId = `${userId}_${generateId(d)}`;
+        const dayDateId = generateId(d);
 
-        week.push({
-            id: dayId,
-            userId: userId,
-            date: d,
+        week[dayDateId] = {
+            date: d.toISOString(),
             plannedActivityRaw: "Plan",
             isRestDay: false,
-            status: 'pending'
-        });
+            status: 'pending',
+            extras: []
+        };
     }
     return week;
 };
 
 const getWeek = async (userId, date) => {
-    await ensureUser(userId);
     const monday = getMonday(date);
-    const startId = `${userId}_${generateId(monday)}`;
-
-    // Calculate the Sunday ID
     const sunday = new Date(monday);
     sunday.setUTCDate(monday.getUTCDate() + 6);
-    const endId = `${userId}_${generateId(sunday)}`;
 
-    let days = await prisma.day.findMany({
-        where: {
-            userId: userId,
-            id: { gte: startId, lte: endId }
-        },
-        include: {
-            extras: true,
-            activityType: true
-        },
-        orderBy: { date: 'asc' }
-    });
+    const startMonth = getMonthDocPath(userId, monday);
+    const endMonth = getMonthDocPath(userId, sunday);
 
-    if (days.length === 0) {
-        // Generate and save initial week
-        const weekData = generateWeekData(userId, monday);
-        await prisma.day.createMany({
-            data: weekData
-        });
+    const monthDocs = new Set([startMonth, endMonth]);
+    const monthsData = {};
 
-        days = await prisma.day.findMany({
-            where: {
-                userId: userId,
-                id: { gte: startId, lte: endId }
-            },
-            include: {
-                extras: true,
-                activityType: true
-            },
-            orderBy: { date: 'asc' }
-        });
+    for (const path of monthDocs) {
+        const doc = await db.doc(path).get();
+        if (doc.exists) {
+            monthsData[path] = doc.data().days || {};
+        } else {
+            monthsData[path] = {};
+        }
     }
 
-    // Check for skipped days
     const todayId = generateId(new Date());
+    const weekDays = [];
     let changed = false;
+    const updates = {};
 
-    const processedDays = days.map(day => {
-        const dayDateId = generateId(day.date);
-        let updatedStatus = day.status;
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setUTCDate(monday.getUTCDate() + i);
+        const dayDateId = generateId(d);
+        const monthPath = getMonthDocPath(userId, d);
 
-        if (day.isRestDay && day.status === 'skipped') {
-            updatedStatus = 'pending';
+        let dayData = monthsData[monthPath][dayDateId];
+
+        if (!dayData) {
+            // Initialize day if missing
+            dayData = {
+                date: d.toISOString(),
+                plannedActivityRaw: "Plan",
+                isRestDay: false,
+                status: 'pending',
+                extras: []
+            };
+            if (!updates[monthPath]) updates[monthPath] = { days: {} };
+            updates[monthPath].days[dayDateId] = dayData;
             changed = true;
         }
 
-        if (dayDateId < todayId && day.status === 'pending' && !day.isRestDay) {
+        // Apply business rules for 'skipped'
+        let updatedStatus = dayData.status;
+        if (dayData.isRestDay && dayData.status === 'skipped') {
+            updatedStatus = 'pending';
+            changed = true;
+        }
+        if (dayDateId < todayId && dayData.status === 'pending' && !dayData.isRestDay) {
             updatedStatus = 'skipped';
             changed = true;
         }
 
-        return { ...day, status: updatedStatus };
-    });
+        if (updatedStatus !== dayData.status) {
+            dayData.status = updatedStatus;
+            if (!updates[monthPath]) updates[monthPath] = { days: {} };
+            if (!updates[monthPath].days[dayDateId]) updates[monthPath].days[dayDateId] = {};
+            updates[monthPath].days[dayDateId].status = updatedStatus;
+        }
 
-    if (changed) {
-        // Batch update statuses
-        await Promise.all(processedDays.map(day =>
-            prisma.day.update({
-                where: { id: day.id },
-                data: { status: day.status }
-            })
-        ));
+        weekDays.push(mapFirestoreDay(dayDateId, dayData));
     }
 
-    // Format for return (to match existing API)
-    return processedDays.map(day => ({
-        id: generateId(day.date), // Controller expects YYYY-MM-DD
-        date: day.date.toISOString(),
-        dayName: day.date.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }),
-        plannedActivity: day.activityType ? day.activityType.name : day.plannedActivityRaw,
-        isRestDay: day.isRestDay,
-        status: day.status,
-        extras: day.extras.map(e => e.name)
-    }));
+    if (changed) {
+        for (const [path, fields] of Object.entries(updates)) {
+            await db.doc(path).set(fields, { merge: true });
+        }
+    }
+
+    return weekDays;
 };
 
 const updateDay = async (userId, dayDateId, data) => {
-    await ensureUser(userId);
-    const dayId = `${userId}_${dayDateId}`;
+    const date = new Date(dayDateId + 'T12:00:00Z'); // Midday to avoid TZ issues
+    const monthPath = getMonthDocPath(userId, date);
+    const docRef = db.doc(monthPath);
+    const doc = await docRef.get();
 
-    const existingDay = await prisma.day.findUnique({
-        where: { id: dayId },
-        include: { extras: true }
-    });
+    let dayData = (doc.exists && doc.data().days) ? doc.data().days[dayDateId] : null;
 
-    if (!existingDay) return null;
+    if (!dayData) {
+        // If it doesn't exist, we'll initialize it with defaults before applying updates
+        dayData = {
+            date: date.toISOString(),
+            plannedActivityRaw: "Plan",
+            isRestDay: false,
+            status: 'pending',
+            extras: []
+        };
+    }
 
-    const updateData = {};
+    const updates = { days: { [dayDateId]: {} } };
+    let changed = false;
+
     if (data.plannedActivity !== undefined) {
-        const sanitizedActivity = sanitizeString(data.plannedActivity);
-        updateData.plannedActivityRaw = sanitizedActivity;
+        const sanitizedActivity = sanitizeString(data.plannedActivity).trim();
+        dayData.plannedActivityRaw = sanitizedActivity;
+        updates.days[dayDateId].plannedActivityRaw = dayData.plannedActivityRaw;
+        changed = true;
 
-        // Lookup activityType by name (global or user-specific)
-        let activityType = await prisma.activityType.findFirst({
-            where: {
-                name: { equals: sanitizedActivity, mode: 'insensitive' },
-                OR: [
-                    { userId: null },
-                    { userId: userId }
-                ]
-            }
-        });
+        // Auto-creation logic for activities
+        if (sanitizedActivity !== "" && sanitizedActivity !== "Plan") {
+            const globalRef = db.collection('activity_types').where('name', '==', sanitizedActivity).limit(1);
+            const userRef = db.collection(`users/${userId}/activities`).where('name', '==', sanitizedActivity).limit(1);
 
-        // If not found and it's not the default "Plan", create a user-specific one
-        if (!activityType && sanitizedActivity.trim() !== "" && sanitizedActivity !== "Plan") {
-            try {
-                activityType = await prisma.activityType.create({
-                    data: {
-                        name: sanitizedActivity,
-                        userId: userId
-                    }
-                });
-            } catch (e) {
-                // In case of a race condition where it was JUST created
-                activityType = await prisma.activityType.findFirst({
-                    where: {
-                        name: sanitizedActivity,
-                        userId: userId
-                    }
+            const [globalSnap, userSnap] = await Promise.all([globalRef.get(), userRef.get()]);
+
+            if (globalSnap.empty && userSnap.empty) {
+                await db.collection(`users/${userId}/activities`).add({
+                    name: sanitizedActivity,
+                    createdAt: new Date().toISOString()
                 });
             }
-        }
-
-        if (activityType) {
-            updateData.activityTypeId = activityType.id;
-        } else {
-            updateData.activityTypeId = null;
         }
     }
-    if (data.isRestDay !== undefined) updateData.isRestDay = data.isRestDay;
-    if (data.status !== undefined) updateData.status = data.status;
+    if (data.isRestDay !== undefined) {
+        dayData.isRestDay = data.isRestDay;
+        updates.days[dayDateId].isRestDay = dayData.isRestDay;
+        changed = true;
+    }
+    if (data.status !== undefined) {
+        dayData.status = data.status;
+        updates.days[dayDateId].status = dayData.status;
+        changed = true;
+    }
+    if (data.extras !== undefined) {
+        dayData.extras = sanitizeArray(data.extras);
+        updates.days[dayDateId].extras = dayData.extras;
+        changed = true;
+    }
 
     // Enforce business rules
-    const finalIsRestDay = data.isRestDay !== undefined ? data.isRestDay : existingDay.isRestDay;
-    let finalStatus = data.status !== undefined ? data.status : existingDay.status;
-
-    if (finalIsRestDay && finalStatus === 'skipped') {
+    let finalStatus = dayData.status;
+    if (dayData.isRestDay && finalStatus === 'skipped') {
         finalStatus = 'pending';
     }
 
     const todayId = generateId(new Date());
-    if (dayDateId < todayId && finalStatus === 'pending' && !finalIsRestDay) {
+    if (dayDateId < todayId && finalStatus === 'pending' && !dayData.isRestDay) {
         finalStatus = 'skipped';
     }
 
-    updateData.status = finalStatus;
-
-    // Handle extras
-    if (data.extras !== undefined) {
-        const sanitizedExtras = sanitizeArray(data.extras);
-        // Simple strategy: delete and recreate extras
-        await prisma.extra.deleteMany({ where: { dayId } });
-        await prisma.extra.createMany({
-            data: sanitizedExtras.map(name => ({ dayId, name }))
-        });
+    if (finalStatus !== dayData.status || updates.days[dayDateId].status) {
+        dayData.status = finalStatus;
+        updates.days[dayDateId].status = finalStatus;
+        changed = true;
     }
 
-    const updatedDay = await prisma.day.update({
-        where: { id: dayId },
-        data: updateData,
-        include: { extras: true, activityType: true }
-    });
+    if (changed) {
+        await docRef.set(updates, { merge: true });
+    }
 
-    return {
-        id: generateId(updatedDay.date),
-        date: updatedDay.date.toISOString(),
-        dayName: updatedDay.date.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }),
-        plannedActivity: updatedDay.activityType ? updatedDay.activityType.name : updatedDay.plannedActivityRaw,
-        isRestDay: updatedDay.isRestDay,
-        status: updatedDay.status,
-        extras: updatedDay.extras.map(e => e.name)
-    };
+    return mapFirestoreDay(dayDateId, dayData);
 };
 
 const getDaysInRange = async (userId, startDate, endDate) => {
-    await ensureUser(userId);
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    const days = await prisma.day.findMany({
-        where: {
-            userId: userId,
-            date: {
-                gte: start,
-                lte: end
-            }
-        },
-        include: {
-            extras: true,
-            activityType: true
-        },
-        orderBy: { date: 'asc' }
-    });
+    // Determine which months we need to fetch
+    const monthsToFetch = [];
+    let current = new Date(start);
+    current.setUTCDate(1); // Start of month
 
-    return days.map(day => ({
-        id: generateId(day.date),
-        date: day.date.toISOString(),
-        plannedActivity: day.activityType ? day.activityType.name : day.plannedActivityRaw,
-        isRestDay: day.isRestDay,
-        status: day.status,
-        extras: day.extras.map(e => e.name)
-    }));
+    while (current <= end) {
+        monthsToFetch.push(getMonthDocPath(userId, current));
+        current.setUTCMonth(current.getUTCMonth() + 1);
+    }
+
+    const allDays = [];
+    for (const path of monthsToFetch) {
+        const doc = await db.doc(path).get();
+        if (doc.exists && doc.data().days) {
+            const daysMap = doc.data().days;
+            Object.keys(daysMap).sort().forEach(dateId => {
+                if (dateId >= startDate && dateId <= endDate) {
+                    allDays.push(mapFirestoreDay(dateId, daysMap[dateId]));
+                }
+            });
+        }
+    }
+
+    return allDays;
+};
+
+const getActivities = async (userId) => {
+    // Fetch global activities
+    const globalSnapshot = await db.collection('activity_types').orderBy('name', 'asc').get();
+    const globalActivities = globalSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), userId: null }));
+
+    // Fetch user-specific activities
+    const userSnapshot = await db.collection(`users/${userId}/activities`).orderBy('name', 'asc').get();
+    const userActivities = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), userId }));
+
+    return [...globalActivities, ...userActivities].sort((a, b) => a.name.localeCompare(b.name));
 };
 
 module.exports = {
     getWeek,
     updateDay,
-    getDaysInRange
+    getDaysInRange,
+    getActivities
 };
 

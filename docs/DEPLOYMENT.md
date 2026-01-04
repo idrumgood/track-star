@@ -22,12 +22,38 @@ This will:
 
 ## 2. Run Locally
 
-To test the container locally:
+To test the container locally, you need to provide your Google Cloud Project ID and authentication. 
 
+### Option A: Using Local Credentials (ADC)
+This is the easiest way to test if you have `gcloud` installed locally. 
+
+**Windows (PowerShell):**
+```powershell
+docker run -p 3000:3000 `
+  -v "$env:APPDATA\gcloud:/root/.config/gcloud" `
+  -e GOOGLE_CLOUD_PROJECT="your-project-id" `
+  -e GOOGLE_CLIENT_ID="your-google-id" `
+  track-star
+```
+
+**macOS / Linux:**
 ```bash
 docker run -p 3000:3000 \
-  -e DATABASE_URL="postgresql://postgres:urlencoded-password@host.docker.internal:5432/postgres" \
-  -e DATABASE_PASSWORD="urlencoded-password" \
+  -v "$HOME/.config/gcloud:/root/.config/gcloud" \
+  -e GOOGLE_CLOUD_PROJECT="your-project-id" \
+  -e GOOGLE_CLIENT_ID="your-google-id" \
+  track-star
+```
+
+### Option B: Using a Service Account Key
+If you prefer to use a JSON key file:
+1. Place your key in the project root as `key.json`.
+2. Run:
+```bash
+docker run -p 3000:3000 \
+  -v "$(pwd)/key.json:/app/key.json" \
+  -e GOOGLE_APPLICATION_CREDENTIALS="/app/key.json" \
+  -e GOOGLE_CLOUD_PROJECT="your-project-id" \
   -e GOOGLE_CLIENT_ID="your-google-id" \
   track-star
 ```
@@ -39,18 +65,16 @@ docker run -p 3000:3000 \
 - **Foreground**: Press `Ctrl + C`.
 - **Background**: Run `docker ps` to get the ID, then `docker stop <CONTAINER_ID>`.
 
-### Local Development (Cloud SQL)
+### Local Development
 
-When running the app locally (outside of Docker) or running Prisma commands, you must start the database proxy to establish a secure tunnel:
+1. **Local Authentication**: Ensure the SDK can access your project:
+   ```bash
+   gcloud auth application-default login
+   ```
 
-```bash
-cd server
-node scripts/db-proxy.js
-```
+2. **Database Creation**: If this is a new project, you MUST create the Firestore database in the console (see section 4).
 
-Keep this running in a separate terminal. The application will connect to `localhost:5432` (or `host.docker.internal:5432` if in Docker). 
-
-**Note**: The proxy binds to `0.0.0.0` to ensure Docker containers can reach it.
+The application will connect to Firestore in the project specified by the `GOOGLE_CLOUD_PROJECT` environment variable (or your default gcloud project).
 
 ## 3. Deploy to Google Cloud Run
 
@@ -66,9 +90,8 @@ Keep this running in a separate terminal. The application will connect to `local
     gcloud builds submit --tag gcr.io/[PROJECT-ID]/track-star
     ```
 
-
 3.  **Deploy to Cloud Run**:
-    Pass the necessary environment variables for Google Auth and Cloud SQL:
+    Pass the necessary environment variables:
 
     ```bash
     gcloud run deploy track-star \
@@ -76,8 +99,7 @@ Keep this running in a separate terminal. The application will connect to `local
       --platform managed \
       --region us-central1 \
       --allow-unauthenticated \
-      --add-cloudsql-instances=[PROJECT-ID]:us-central1:track-star-db \
-      --set-env-vars="GOOGLE_CLOUD_PROJECT=[PROJECT-ID],DATABASE_PASSWORD=[YOUR_DATABASE_PASSWORD],GOOGLE_CLIENT_ID=[GOOGLE-CLIENT-ID]"
+      --set-env-vars="GOOGLE_CLOUD_PROJECT=[PROJECT-ID],GOOGLE_CLIENT_ID=[GOOGLE-CLIENT-ID]"
     ```
 
 ## 4. Google Cloud Console Configuration
@@ -92,10 +114,15 @@ After deploying, you must update your Google Cloud Console settings to allow the
 4.  (Optional but recommended) Add the same URL to **Authorized redirect URIs**.
 5.  Save the changes.
 
-### Database (Cloud SQL)
-1. Ensure the **Cloud SQL Admin API** is enabled for your project.
-2. The Cloud Run service account must have the **Cloud SQL Client** role.
-3. If running Prisma migrations manually, use the `db-proxy.js` script.
+### Firestore Permissions & Setup
+1. **Enable the API**: Ensure the **Firestore API** is enabled for your project.
+2. **Create the Database**: 
+   - Go to **Firestore** in the console.
+   - Click **Create Database**.
+   - Select **Native Mode** (recommended).
+   - Choose a region (e.g., `us-central1`).
+   - Use the **(default)** database ID.
+3. **IAM Roles**: The Cloud Run service account must have the **Cloud Datastore User** role.
 
 
 ## Troubleshooting

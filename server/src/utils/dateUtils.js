@@ -27,4 +27,10 @@ const getRangeMondays = (start, end) => {
     return mondays;
 };
 
-module.exports = { getMonday, generateId, getRangeMondays };
+const getMonthDocPath = (userId, date) => {
+    const d = new Date(date);
+    const monthId = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    return `users/${userId}/months/${monthId}`;
+};
+
+module.exports = { getMonday, generateId, getRangeMondays, getMonthDocPath };
