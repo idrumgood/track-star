@@ -11,4 +11,16 @@ const getActivities = async (req, res) => {
     }
 };
 
-module.exports = { getActivities };
+const deleteActivity = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id } = req.params;
+        await store.deleteActivity(userId, id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error deleting activity:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+};
+
+module.exports = { getActivities, deleteActivity };

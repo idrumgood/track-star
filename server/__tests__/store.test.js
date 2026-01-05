@@ -129,4 +129,58 @@ describe('store.js (Firestore)', () => {
             expect(result[3].id).toBe('2026-01-02');
         });
     });
+
+    describe('ensureUser', () => {
+        test('should create user with default settings if not exists', async () => {
+            const userData = { id: 'user1', email: 'test@example.com', name: 'Test User', picture: 'pic' };
+            mockDocRef.get.mockResolvedValue({ exists: false });
+
+            const result = await store.ensureUser(userData);
+
+            expect(mockDocRef.set).toHaveBeenCalledWith(expect.objectContaining({
+                email: 'test@example.com',
+                settings: { theme: 'dark' }
+            }));
+            expect(result.theme).toBe('dark');
+        });
+
+        test('should merge user data if user already exists', async () => {
+            const userData = { id: 'user1', email: 'new@example.com', name: 'New Name' };
+            mockDocRef.get.mockResolvedValue({
+                exists: true,
+                data: () => ({ email: 'old@example.com', settings: { theme: 'light' } })
+            });
+
+            const result = await store.ensureUser(userData);
+
+            expect(mockDocRef.set).toHaveBeenCalledWith(expect.objectContaining({
+                email: 'new@example.com'
+            }), { merge: true });
+            expect(result.theme).toBe('light');
+        });
+    });
+
+    describe('Profile Management', () => {
+        test('should get user profile', async () => {
+            mockDocRef.get.mockResolvedValue({
+                exists: true,
+                data: () => ({ name: 'Test', settings: { theme: 'dark' } })
+            });
+
+            const result = await store.getUserProfile('user1');
+            expect(result.name).toBe('Test');
+        });
+
+        test('should update user profile', async () => {
+            mockDocRef.get.mockResolvedValue({
+                exists: true,
+                data: () => ({ name: 'Updated' })
+            });
+
+            const result = await store.updateUserProfile('user1', { name: 'Updated' });
+
+            expect(mockDocRef.set).toHaveBeenCalledWith({ name: 'Updated' }, { merge: true });
+            expect(result.name).toBe('Updated');
+        });
+    });
 });
