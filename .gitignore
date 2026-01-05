@@ -123,9 +123,6 @@ dist
 *.sln
 *.sw?
 
-.agent
-.agent/
-
 local_commands
 # Prisma
 server/src/generated/

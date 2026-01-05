@@ -118,6 +118,7 @@ const logout = () => {
     <nav v-if="user" class="main-nav">
         <router-link to="/" class="nav-item" active-class="active">Plan</router-link>
         <router-link to="/stats" class="nav-item" active-class="active">Stats</router-link>
+        <router-link to="/settings" class="nav-item" active-class="active">Settings</router-link>
     </nav>
 
     <div class="user-controls">

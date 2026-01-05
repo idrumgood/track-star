@@ -2,6 +2,8 @@ const { OAuth2Client } = require('google-auth-library');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const { ensureUser } = require('../db/store');
+
 /**
  * Google Authentication Middleware
  * Verifies the Google ID Token sent in the Authorization header.
@@ -22,6 +24,14 @@ const auth = async (req, res, next) => {
         });
 
         const payload = ticket.getPayload();
+
+        // Synchronize user data with Firestore
+        await ensureUser({
+            id: payload.sub,
+            name: payload.name,
+            email: payload.email,
+            picture: payload.picture
+        });
 
         // Populate user object
         req.user = {

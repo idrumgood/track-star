@@ -15,10 +15,47 @@ const mapFirestoreDay = (dateId, dayData) => {
     };
 };
 
-const ensureUser = async (userId) => {
-    // In Firestore, we can just ensure the user document exists if we want to store metadata
-    // For now, we'll just return the ID
-    return { id: userId };
+const ensureUser = async (userData) => {
+    const { id, email, name, picture } = userData;
+    const userRef = db.doc(`users/${id}`);
+    const doc = await userRef.get();
+
+    const dataToSet = {
+        email,
+        name,
+        picture,
+        lastLogin: new Date().toISOString()
+    };
+
+    if (!doc.exists) {
+        // Initialize settings for new users
+        dataToSet.settings = {
+            theme: 'dark'
+        };
+        await userRef.set(dataToSet);
+    } else {
+        await userRef.set(dataToSet, { merge: true });
+    }
+
+    return { id, ...dataToSet, ...(doc.exists ? doc.data().settings : { theme: 'dark' }) };
+};
+
+const getUserProfile = async (userId) => {
+    const doc = await db.doc(`users/${userId}`).get();
+    if (!doc.exists) return null;
+    return { id: userId, ...doc.data() };
+};
+
+const updateUserProfile = async (userId, data) => {
+    const userRef = db.doc(`users/${userId}`);
+    await userRef.set(data, { merge: true });
+    const updated = await userRef.get();
+    return { id: userId, ...updated.data() };
+};
+
+const deleteActivity = async (userId, activityId) => {
+    await db.doc(`users/${userId}/activities/${activityId}`).delete();
+    return true;
 };
 
 const generateWeekData = (userId, mondayDate) => {
@@ -245,6 +282,10 @@ module.exports = {
     getWeek,
     updateDay,
     getDaysInRange,
-    getActivities
+    getActivities,
+    ensureUser,
+    getUserProfile,
+    updateUserProfile,
+    deleteActivity
 };
 

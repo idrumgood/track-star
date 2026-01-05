@@ -4,9 +4,12 @@ import UserStats from '../components/UserStats.vue';
 import AboutView from '../components/AboutView.vue';
 import LegalView from '../components/LegalView.vue';
 
+import SettingsView from '../components/SettingsView.vue';
+
 const routes = [
     { path: '/', component: WeekView },
     { path: '/stats', component: UserStats },
+    { path: '/settings', component: SettingsView },
     { path: '/about', component: AboutView },
     { path: '/legal', component: LegalView }
 ];
