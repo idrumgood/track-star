@@ -130,7 +130,7 @@ const monthLabels = computed(() => {
 </script>
 
 <template>
-    <div class="contribution-container glass-panel">
+    <div class="consistency-container glass-panel">
         <div class="grid-header">
             <div class="title-nav">
                 <h3>Consistency Timeline</h3>
@@ -180,7 +180,7 @@ const monthLabels = computed(() => {
 </template>
 
 <style scoped>
-.contribution-container {
+.consistency-container {
     padding: var(--spacing-lg);
     display: flex;
     flex-direction: column;
