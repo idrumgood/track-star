@@ -11,6 +11,7 @@ import {
   LinearScale, 
   BarElement 
 } from 'chart.js';
+import ContributionGrid from './ContributionGrid.vue';
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
@@ -185,6 +186,13 @@ const barOptions = {
                 <span class="stat-value">{{ stats.summary.extraActivitiesCount }} <small>items</small></span>
             </div>
         </div>
+        
+        <!-- Contribution Grid -->
+        <ContributionGrid 
+            :days="stats.rawDays" 
+            :start-date="startDate" 
+            :end-date="endDate"
+        />
 
         <!-- Charts Row -->
         <div class="charts-row">
