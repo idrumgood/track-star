@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
-import ContributionGrid from '../ContributionGrid.vue';
+import ConsistencyGrid from '../ConsistencyGrid.vue';
 
-describe('ContributionGrid', () => {
+describe('ConsistencyGrid', () => {
     const mockDays = [
         { id: '2026-01-01', status: 'completed', plannedActivity: 'Run', extras: [] },
         { id: '2026-01-02', status: 'skipped', plannedActivity: 'Gym', extras: [] },
@@ -11,7 +11,7 @@ describe('ContributionGrid', () => {
     ];
 
     it('renders the grid header and legend', () => {
-        const wrapper = mount(ContributionGrid, {
+        const wrapper = mount(ConsistencyGrid, {
             props: {
                 days: mockDays,
                 year: 2026
@@ -24,7 +24,7 @@ describe('ContributionGrid', () => {
     });
 
     it('calculates levels correctly', () => {
-        const wrapper = mount(ContributionGrid, {
+        const wrapper = mount(ConsistencyGrid, {
             props: {
                 days: mockDays,
                 year: 2026
@@ -44,7 +44,7 @@ describe('ContributionGrid', () => {
     });
 
     it('emits year-change event', async () => {
-        const wrapper = mount(ContributionGrid, {
+        const wrapper = mount(ConsistencyGrid, {
             props: {
                 days: [],
                 year: 2026

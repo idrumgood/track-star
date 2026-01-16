@@ -86,7 +86,13 @@ const getLevel = (day) => {
 };
 
 const formatDate = (date) => {
-    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString(undefined, { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        timeZone: 'UTC'
+    });
 };
 
 const getTooltip = (day) => {

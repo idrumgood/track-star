@@ -11,8 +11,9 @@ import {
   LinearScale, 
   BarElement 
 } from 'chart.js';
-import ContributionGrid from './ContributionGrid.vue';
+import ConsistencyGrid from './ConsistencyGrid.vue';
 import { getMonthFromCache, saveMonthToCache } from '../utils/statsCache';
+import { calculateStats } from '../utils/statsCalculator';
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
@@ -27,7 +28,6 @@ const stats = ref(null);
 const isLoading = ref(true);
 const yearDays = ref([]);
 const selectedYear = ref(new Date().getFullYear());
-const isYearLoading = ref(false);
 
 // Default range: last 30 days
 const defaultEndDate = new Date().toISOString().split('T')[0];
@@ -36,51 +36,50 @@ const defaultStartDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOSt
 const endDate = ref(sessionStorage.getItem('stats_end_date') || defaultEndDate);
 const startDate = ref(sessionStorage.getItem('stats_start_date') || defaultStartDate);
 
-const fetchStats = async () => {
+const fetchAndCalculate = async () => {
     if (!props.user) return;
     isLoading.value = true;
-    try {
-        const res = await fetch(`/api/stats?start=${startDate.value}&end=${endDate.value}`, {
-            headers: { 'Authorization': `Bearer ${props.user.idToken}` }
-        });
-        if (res.ok) {
-            stats.value = await res.json();
-        }
-    } catch (e) {
-        console.error("Failed to fetch stats", e);
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const fetchYearData = async () => {
-    if (!props.user) return;
-    isYearLoading.value = true;
-    const year = selectedYear.value;
-    const months = [];
     
-    // Check cache first
-    const missingMonths = [];
+    const year = selectedYear.value;
+    const monthsNeeded = new Set();
+    
+    // Add all months for the selected year
     for (let m = 1; m <= 12; m++) {
-        const monthId = `${year}-${String(m).padStart(2, '0')}`;
+        monthsNeeded.add(`${year}-${String(m).padStart(2, '0')}`);
+    }
+    
+    // Add months for the current date range if they differ
+    const startRange = new Date(startDate.value);
+    const endRange = new Date(endDate.value);
+    let curr = new Date(startRange);
+    curr.setUTCDate(1);
+    while (curr <= endRange) {
+        monthsNeeded.add(`${curr.getUTCFullYear()}-${String(curr.getUTCMonth() + 1).padStart(2, '0')}`);
+        curr.setUTCMonth(curr.getUTCMonth() + 1);
+    }
+
+    const allMonths = [...monthsNeeded].sort();
+    const monthsData = [];
+    const missingMonths = [];
+
+    allMonths.forEach(monthId => {
         const cached = getMonthFromCache(props.user.id, monthId);
         if (cached) {
-            months[m - 1] = cached;
+            monthsData.push(...cached);
         } else {
-            missingMonths.push(m);
+            missingMonths.push(monthId);
         }
-    }
+    });
 
     if (missingMonths.length > 0) {
         try {
-            // Fetch missing months in chunks or one range
-            // To simplify, we'll fetch the whole range of missing months
-            const startMonth = missingMonths[0];
-            const endMonth = missingMonths[missingMonths.length - 1];
-            
-            const startStr = `${year}-${String(startMonth).padStart(2, '0')}-01`;
-            const lastDay = new Date(Date.UTC(year, endMonth, 0)).getUTCDate();
-            const endStr = `${year}-${String(endMonth).padStart(2, '0')}-${lastDay}`;
+            // Fetch missing months in one go
+            const first = missingMonths[0];
+            const last = missingMonths[missingMonths.length - 1];
+            const startStr = `${first}-01`;
+            const [y, m] = last.split('-').map(Number);
+            const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+            const endStr = `${last}-${lastDay}`;
 
             const res = await fetch(`/api/stats?start=${startStr}&end=${endStr}`, {
                 headers: { 'Authorization': `Bearer ${props.user.idToken}` }
@@ -89,35 +88,33 @@ const fetchYearData = async () => {
                 const data = await res.json();
                 const fetchedDays = data.rawDays || [];
                 
-                // Group fetched days by month and cache them
-                missingMonths.forEach(m => {
-                    const monthId = `${year}-${String(m).padStart(2, '0')}`;
+                missingMonths.forEach(monthId => {
                     const monthDays = fetchedDays.filter(d => d.id.startsWith(monthId));
                     saveMonthToCache(props.user.id, monthId, monthDays);
-                    months[m - 1] = monthDays;
+                    monthsData.push(...monthDays);
                 });
             }
         } catch (e) {
-            console.error("Failed to fetch year data", e);
+            console.error("Failed to fetch unified stats", e);
         }
     }
 
-    yearDays.value = months.flat().filter(Boolean);
-    isYearLoading.value = false;
+    // Filter yearDays for the grid
+    const yearPrefix = `${year}-`;
+    yearDays.value = monthsData.filter(d => d.id.startsWith(yearPrefix));
+
+    // Calculate stats for the selected range
+    stats.value = calculateStats(monthsData, startDate.value, endDate.value);
+    isLoading.value = false;
 };
 
-onMounted(() => {
-    fetchStats();
-    fetchYearData();
-});
+onMounted(fetchAndCalculate);
 
-watch([startDate, endDate], () => {
+watch([startDate, endDate, selectedYear], () => {
     sessionStorage.setItem('stats_start_date', startDate.value);
     sessionStorage.setItem('stats_end_date', endDate.value);
-    fetchStats();
+    fetchAndCalculate();
 });
-
-watch(selectedYear, fetchYearData);
 
 const handleYearChange = (offset) => {
     selectedYear.value += offset;
@@ -254,8 +251,8 @@ const barOptions = {
             </div>
         </div>
         
-        <!-- Contribution Grid -->
-        <ContributionGrid 
+        <!-- Consistency Grid -->
+        <ConsistencyGrid 
             :days="yearDays" 
             :year="selectedYear"
             @year-change="handleYearChange"
