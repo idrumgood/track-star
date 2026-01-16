@@ -191,7 +191,7 @@ const logout = () => {
 
   <footer>
     <div class="footer-content">
-      <p>&copy; 2025 Bryan Dunk</p>
+      <p>&copy; {{ new Date().getFullYear() }} Bryan Dunk</p>
       <div class="footer-links">
         <router-link to="/about" class="footer-link">About</router-link>
         <span class="divider">•</span>

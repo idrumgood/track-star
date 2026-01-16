@@ -11,6 +11,9 @@ import {
   LinearScale, 
   BarElement 
 } from 'chart.js';
+import ConsistencyGrid from './ConsistencyGrid.vue';
+import { getMonthFromCache, saveMonthToCache } from '../utils/statsCache';
+import { calculateStats } from '../utils/statsCalculator';
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
@@ -23,6 +26,8 @@ const props = defineProps({
 
 const stats = ref(null);
 const isLoading = ref(true);
+const yearDays = ref([]);
+const selectedYear = ref(new Date().getFullYear());
 
 // Default range: last 30 days
 const defaultEndDate = new Date().toISOString().split('T')[0];
@@ -31,29 +36,89 @@ const defaultStartDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOSt
 const endDate = ref(sessionStorage.getItem('stats_end_date') || defaultEndDate);
 const startDate = ref(sessionStorage.getItem('stats_start_date') || defaultStartDate);
 
-const fetchStats = async () => {
+const fetchAndCalculate = async () => {
     if (!props.user) return;
     isLoading.value = true;
-    try {
-        const res = await fetch(`/api/stats?start=${startDate.value}&end=${endDate.value}`, {
-            headers: { 'Authorization': `Bearer ${props.user.idToken}` }
-        });
-        if (res.ok) {
-            stats.value = await res.json();
-        }
-    } catch (e) {
-        console.error("Failed to fetch stats", e);
-    } finally {
-        isLoading.value = false;
+    
+    const year = selectedYear.value;
+    const monthsNeeded = new Set();
+    
+    // Add all months for the selected year
+    for (let m = 1; m <= 12; m++) {
+        monthsNeeded.add(`${year}-${String(m).padStart(2, '0')}`);
     }
+    
+    // Add months for the current date range if they differ
+    const startRange = new Date(startDate.value);
+    const endRange = new Date(endDate.value);
+    let curr = new Date(startRange);
+    curr.setUTCDate(1);
+    while (curr <= endRange) {
+        monthsNeeded.add(`${curr.getUTCFullYear()}-${String(curr.getUTCMonth() + 1).padStart(2, '0')}`);
+        curr.setUTCMonth(curr.getUTCMonth() + 1);
+    }
+
+    const allMonths = [...monthsNeeded].sort();
+    const monthsData = [];
+    const missingMonths = [];
+
+    allMonths.forEach(monthId => {
+        const cached = getMonthFromCache(props.user.id, monthId);
+        if (cached) {
+            monthsData.push(...cached);
+        } else {
+            missingMonths.push(monthId);
+        }
+    });
+
+    if (missingMonths.length > 0) {
+        try {
+            // Fetch missing months in one go
+            const first = missingMonths[0];
+            const last = missingMonths[missingMonths.length - 1];
+            const startStr = `${first}-01`;
+            const [y, m] = last.split('-').map(Number);
+            const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+            const endStr = `${last}-${lastDay}`;
+
+            const res = await fetch(`/api/stats?start=${startStr}&end=${endStr}`, {
+                headers: { 'Authorization': `Bearer ${props.user.idToken}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const fetchedDays = data.rawDays || [];
+                
+                missingMonths.forEach(monthId => {
+                    const monthDays = fetchedDays.filter(d => d.id.startsWith(monthId));
+                    saveMonthToCache(props.user.id, monthId, monthDays);
+                    monthsData.push(...monthDays);
+                });
+            }
+        } catch (e) {
+            console.error("Failed to fetch unified stats", e);
+        }
+    }
+
+    // Filter yearDays for the grid
+    const yearPrefix = `${year}-`;
+    yearDays.value = monthsData.filter(d => d.id.startsWith(yearPrefix));
+
+    // Calculate stats for the selected range
+    stats.value = calculateStats(monthsData, startDate.value, endDate.value);
+    isLoading.value = false;
 };
 
-onMounted(fetchStats);
-watch([startDate, endDate], () => {
+onMounted(fetchAndCalculate);
+
+watch([startDate, endDate, selectedYear], () => {
     sessionStorage.setItem('stats_start_date', startDate.value);
     sessionStorage.setItem('stats_end_date', endDate.value);
-    fetchStats();
+    fetchAndCalculate();
 });
+
+const handleYearChange = (offset) => {
+    selectedYear.value += offset;
+};
 
 // Chart Data: Activity Distribution
 const activityChartData = computed(() => {
@@ -185,6 +250,13 @@ const barOptions = {
                 <span class="stat-value">{{ stats.summary.extraActivitiesCount }} <small>items</small></span>
             </div>
         </div>
+        
+        <!-- Consistency Grid -->
+        <ConsistencyGrid 
+            :days="yearDays" 
+            :year="selectedYear"
+            @year-change="handleYearChange"
+        />
 
         <!-- Charts Row -->
         <div class="charts-row">
