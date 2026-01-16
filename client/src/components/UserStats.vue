@@ -12,6 +12,7 @@ import {
   BarElement 
 } from 'chart.js';
 import ContributionGrid from './ContributionGrid.vue';
+import { getMonthFromCache, saveMonthToCache } from '../utils/statsCache';
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
@@ -24,6 +25,9 @@ const props = defineProps({
 
 const stats = ref(null);
 const isLoading = ref(true);
+const yearDays = ref([]);
+const selectedYear = ref(new Date().getFullYear());
+const isYearLoading = ref(false);
 
 // Default range: last 30 days
 const defaultEndDate = new Date().toISOString().split('T')[0];
@@ -49,12 +53,75 @@ const fetchStats = async () => {
     }
 };
 
-onMounted(fetchStats);
+const fetchYearData = async () => {
+    if (!props.user) return;
+    isYearLoading.value = true;
+    const year = selectedYear.value;
+    const months = [];
+    
+    // Check cache first
+    const missingMonths = [];
+    for (let m = 1; m <= 12; m++) {
+        const monthId = `${year}-${String(m).padStart(2, '0')}`;
+        const cached = getMonthFromCache(props.user.id, monthId);
+        if (cached) {
+            months[m - 1] = cached;
+        } else {
+            missingMonths.push(m);
+        }
+    }
+
+    if (missingMonths.length > 0) {
+        try {
+            // Fetch missing months in chunks or one range
+            // To simplify, we'll fetch the whole range of missing months
+            const startMonth = missingMonths[0];
+            const endMonth = missingMonths[missingMonths.length - 1];
+            
+            const startStr = `${year}-${String(startMonth).padStart(2, '0')}-01`;
+            const lastDay = new Date(Date.UTC(year, endMonth, 0)).getUTCDate();
+            const endStr = `${year}-${String(endMonth).padStart(2, '0')}-${lastDay}`;
+
+            const res = await fetch(`/api/stats?start=${startStr}&end=${endStr}`, {
+                headers: { 'Authorization': `Bearer ${props.user.idToken}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const fetchedDays = data.rawDays || [];
+                
+                // Group fetched days by month and cache them
+                missingMonths.forEach(m => {
+                    const monthId = `${year}-${String(m).padStart(2, '0')}`;
+                    const monthDays = fetchedDays.filter(d => d.id.startsWith(monthId));
+                    saveMonthToCache(props.user.id, monthId, monthDays);
+                    months[m - 1] = monthDays;
+                });
+            }
+        } catch (e) {
+            console.error("Failed to fetch year data", e);
+        }
+    }
+
+    yearDays.value = months.flat().filter(Boolean);
+    isYearLoading.value = false;
+};
+
+onMounted(() => {
+    fetchStats();
+    fetchYearData();
+});
+
 watch([startDate, endDate], () => {
     sessionStorage.setItem('stats_start_date', startDate.value);
     sessionStorage.setItem('stats_end_date', endDate.value);
     fetchStats();
 });
+
+watch(selectedYear, fetchYearData);
+
+const handleYearChange = (offset) => {
+    selectedYear.value += offset;
+};
 
 // Chart Data: Activity Distribution
 const activityChartData = computed(() => {
@@ -189,9 +256,9 @@ const barOptions = {
         
         <!-- Contribution Grid -->
         <ContributionGrid 
-            :days="stats.rawDays" 
-            :start-date="startDate" 
-            :end-date="endDate"
+            :days="yearDays" 
+            :year="selectedYear"
+            @year-change="handleYearChange"
         />
 
         <!-- Charts Row -->

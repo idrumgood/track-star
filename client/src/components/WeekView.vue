@@ -106,6 +106,8 @@ const isFutureWeek = computed(() => {
     return firstDayStr > todayStr;
 });
 
+import { invalidateMonthCache } from '../utils/statsCache';
+
 const updateDay = async (day) => {
     try {
         const res = await fetch(`${API_URL}/day/${day.id}`, {
@@ -119,6 +121,9 @@ const updateDay = async (day) => {
         
         if (res.ok) {
             const updated = await res.json();
+            // Invalidate stats cache for this month
+            invalidateMonthCache(props.user.id, updated.date);
+            
             const index = weekDays.value.findIndex(d => d.id === updated.id);
             if (index !== -1) {
                 weekDays.value[index] = updated;

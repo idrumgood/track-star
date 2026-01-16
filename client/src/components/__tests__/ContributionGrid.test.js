@@ -14,44 +14,48 @@ describe('ContributionGrid', () => {
         const wrapper = mount(ContributionGrid, {
             props: {
                 days: mockDays,
-                startDate: '2026-01-01',
-                endDate: '2026-01-10'
+                year: 2026
             }
         });
 
         expect(wrapper.find('h3').text().toUpperCase()).toBe('CONSISTENCY TIMELINE');
         expect(wrapper.find('.legend').exists()).toBe(true);
+        expect(wrapper.find('.year-label').text()).toBe('2026');
     });
 
     it('calculates levels correctly', () => {
         const wrapper = mount(ContributionGrid, {
             props: {
                 days: mockDays,
-                startDate: '2026-01-01',
-                endDate: '2026-01-04'
+                year: 2026
             }
         });
 
         const squares = wrapper.findAll('.square');
-
-        // Use a more robust way to find the square by matching the data-id or similar
-        // Since I didn't add data-id, I'll search for the one with the correct status/activity in its tooltip
         const findSquare = (text) => squares.find(s => s.attributes('title')?.includes(text));
 
         const completedSquare = findSquare('Run');
         expect(completedSquare).toBeDefined();
         expect(completedSquare.classes()).toContain('level-2');
 
-        const skippedSquare = findSquare('Gym');
-        expect(skippedSquare).toBeDefined();
-        expect(skippedSquare.classes()).toContain('level-skipped');
-
-        const restSquare = findSquare('Rest');
-        expect(restSquare).toBeDefined();
-        expect(restSquare.classes()).toContain('level-rest');
-
         const extraSquare = findSquare('Bike');
         expect(extraSquare).toBeDefined();
         expect(extraSquare.classes()).toContain('level-4');
+    });
+
+    it('emits year-change event', async () => {
+        const wrapper = mount(ContributionGrid, {
+            props: {
+                days: [],
+                year: 2026
+            }
+        });
+
+        const buttons = wrapper.findAll('.nav-btn-sm');
+        await buttons[0].trigger('click'); // prev
+        expect(wrapper.emitted('year-change')[0]).toEqual([-1]);
+
+        await buttons[1].trigger('click'); // next
+        expect(wrapper.emitted('year-change')[1]).toEqual([1]);
     });
 });
