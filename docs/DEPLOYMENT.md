@@ -6,7 +6,7 @@ This guide explains how to build, run, and deploy the Track Star application usi
 
 - **Docker Desktop** (or equivalent Docker engine) installed and running.
 - **Google Cloud CLI** (for deployment).
-- **Firebase Project** set up (track-star-481601).
+- **Firebase Project** set up ([PROJECT-ID]).
 
 ## 1. Build the Docker Image
 
@@ -15,9 +15,9 @@ The frontend uses Vite, which requires environment variables to be available at 
 ```bash
 docker build -t track-star \
   --build-arg VITE_FIREBASE_API_KEY="your-api-key" \
-  --build-arg VITE_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com" \
-  --build-arg VITE_FIREBASE_PROJECT_ID="your-project-id" \
-  --build-arg VITE_FIREBASE_STORAGE_BUCKET="your-project.firebasestorage.app" \
+  --build-arg VITE_FIREBASE_AUTH_DOMAIN="[PROJECT-ID].firebaseapp.com" \
+  --build-arg VITE_FIREBASE_PROJECT_ID="[PROJECT-ID]" \
+  --build-arg VITE_FIREBASE_STORAGE_BUCKET="[PROJECT-ID].firebasestorage.app" \
   --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id" \
   --build-arg VITE_FIREBASE_APP_ID="your-app-id" \
   --build-arg VITE_FIREBASE_MEASUREMENT_ID="your-measurement-id" .
@@ -33,7 +33,7 @@ To test the container locally, you need to provide your Google Cloud Project ID 
 ```powershell
 docker run -p 3000:3000 `
   -v "$env:APPDATA\gcloud:/root/.config/gcloud" `
-  -e GOOGLE_CLOUD_PROJECT="track-star-481601" `
+  -e GOOGLE_CLOUD_PROJECT="[PROJECT-ID]" `
   track-star
 ```
 
@@ -41,7 +41,7 @@ docker run -p 3000:3000 `
 ```bash
 docker run -p 3000:3000 \
   -v "$HOME/.config/gcloud:/root/.config/gcloud" \
-  -e GOOGLE_CLOUD_PROJECT="track-star-481601" \
+  -e GOOGLE_CLOUD_PROJECT="[PROJECT-ID]" \
   track-star
 ```
 
@@ -52,7 +52,7 @@ docker run -p 3000:3000 \
 docker run -p 3000:3000 \
   -v "$(pwd)/key.json:/app/key.json" \
   -e GOOGLE_APPLICATION_CREDENTIALS="/app/key.json" \
-  -e GOOGLE_CLOUD_PROJECT="track-star-481601" \
+  -e GOOGLE_CLOUD_PROJECT="[PROJECT-ID]" \
   track-star
 ```
 
@@ -64,21 +64,15 @@ To deploy to Cloud Run, use Google Cloud Build to handle the build-time argument
 
 1.  **Set the active project**:
     ```bash
-    gcloud config set project track-star-481601
+    gcloud config set project [PROJECT-ID]
     ```
 
 2.  **Submit to Cloud Build**:
-    You must pass the build arguments in the `--build-arg` flag:
+    You must use the `cloudbuild.yaml` file and pass the variables via `--substitutions`:
 
     ```bash
-    gcloud builds submit --tag gcr.io/track-star-481601/track-star \
-      --build-arg VITE_FIREBASE_API_KEY="your-api-key" \
-      --build-arg VITE_FIREBASE_AUTH_DOMAIN="track-star-481601.firebaseapp.com" \
-      --build-arg VITE_FIREBASE_PROJECT_ID="track-star-481601" \
-      --build-arg VITE_FIREBASE_STORAGE_BUCKET="track-star-481601.firebasestorage.app" \
-      --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id" \
-      --build-arg VITE_FIREBASE_APP_ID="your-app-id" \
-      --build-arg VITE_FIREBASE_MEASUREMENT_ID="your-measurement-id"
+    gcloud builds submit --config cloudbuild.yaml \
+      --substitutions=_VITE_FIREBASE_API_KEY="your-api-key",_VITE_FIREBASE_AUTH_DOMAIN="[PROJECT-ID].firebaseapp.com",_VITE_FIREBASE_PROJECT_ID="[PROJECT-ID]",_VITE_FIREBASE_STORAGE_BUCKET="[PROJECT-ID].firebasestorage.app",_VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id",_VITE_FIREBASE_APP_ID="your-app-id",_VITE_FIREBASE_MEASUREMENT_ID="your-measurement-id"
     ```
 
 3.  **Deploy to Cloud Run**:
@@ -86,11 +80,11 @@ To deploy to Cloud Run, use Google Cloud Build to handle the build-time argument
 
     ```bash
     gcloud run deploy track-star \
-      --image gcr.io/track-star-481601/track-star \
+      --image gcr.io/[PROJECT-ID]/track-star \
       --platform managed \
       --region us-central1 \
       --allow-unauthenticated \
-      --set-env-vars="GOOGLE_CLOUD_PROJECT=track-star-481601"
+      --set-env-vars="GOOGLE_CLOUD_PROJECT=[PROJECT-ID]"
     ```
 
 ## 4. Console Configuration
@@ -106,7 +100,7 @@ To deploy to Cloud Run, use Google Cloud Build to handle the build-time argument
 1.  Go to **APIs & Services > Credentials**.
 2.  Edit your **Web client** OAuth 2.0 Client ID.
 3.  Add the Firebase Auth handler to **Authorized redirect URIs**:
-    - `https://track-star-481601.firebaseapp.com/__/auth/handler`
+    - `https://[PROJECT-ID].firebaseapp.com/__/auth/handler`
 
 ### Firestore Setup
 1. **Enable the API**: Ensure the **Firestore API** and **Identity Toolkit API** are enabled.
@@ -125,5 +119,4 @@ To deploy to Cloud Run, use Google Cloud Build to handle the build-time argument
 
 ### Error: redirect_uri_mismatch
 - **Cause**: The Firebase OAuth handler URL is not added to the GCP OAuth Client.
-- **Fix**: Add `https://track-star-481601.firebaseapp.com/__/auth/handler` to Authorized redirect URIs in GCP Console.
-
+- **Fix**: Add `https://[PROJECT-ID].firebaseapp.com/__/auth/handler` to Authorized redirect URIs in GCP Console.
