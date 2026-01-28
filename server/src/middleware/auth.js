@@ -1,12 +1,9 @@
-const { OAuth2Client } = require('google-auth-library');
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
+const admin = require('firebase-admin');
 const { ensureUser } = require('../db/store');
 
 /**
- * Google Authentication Middleware
- * Verifies the Google ID Token sent in the Authorization header.
+ * Firebase Authentication Middleware
+ * Verifies the Firebase ID Token sent in the Authorization header.
  */
 const auth = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -18,28 +15,21 @@ const auth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     try {
-        const ticket = await client.verifyIdToken({
-            idToken: token,
-            audience: process.env.GOOGLE_CLIENT_ID
-        });
+        const decodedToken = await admin.auth().verifyIdToken(token);
 
-        const payload = ticket.getPayload();
+        // decodedToken contains uid, email, name, picture, etc.
+        const userData = {
+            id: decodedToken.uid,
+            name: decodedToken.name || decodedToken.email?.split('@')[0],
+            email: decodedToken.email,
+            picture: decodedToken.picture || ''
+        };
 
         // Synchronize user data with Firestore
-        await ensureUser({
-            id: payload.sub,
-            name: payload.name,
-            email: payload.email,
-            picture: payload.picture
-        });
+        await ensureUser(userData);
 
         // Populate user object
-        req.user = {
-            id: payload.sub,
-            name: payload.name,
-            email: payload.email,
-            picture: payload.picture
-        };
+        req.user = userData;
 
         next();
     } catch (error) {
