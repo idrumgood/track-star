@@ -1,8 +1,12 @@
-const { Firestore } = require('@google-cloud/firestore');
+const admin = require('firebase-admin');
 
-const db = new Firestore({
-    projectId: process.env.GOOGLE_CLOUD_PROJECT,
-    databaseId: process.env.FIRESTORE_DATABASE_ID || '(default)'
-});
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: process.env.GOOGLE_CLOUD_PROJECT
+    });
+}
+
+const db = admin.firestore();
 
 module.exports = db;

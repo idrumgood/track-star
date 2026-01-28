@@ -1,110 +1,79 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import { auth } from './firebase';
+import { 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    onAuthStateChanged, 
+    signOut,
+    updateProfile
+} from 'firebase/auth';
 
 const user = ref(null);
+const email = ref('');
+const password = ref('');
+const displayName = ref('');
+const isSignUp = ref(false);
+const authError = ref('');
+const isLoading = ref(true);
 
-onMounted(async () => {
-    const savedUser = localStorage.getItem('track_star_user');
-    if (savedUser) {
-        user.value = JSON.parse(savedUser);
-        
-        // Optional: Proactively check if token is expired
-        try {
-            const payload = JSON.parse(atob(user.value.idToken.split('.')[1]));
-            const now = Math.floor(Date.now() / 1000);
-            if (payload.exp && payload.exp < now) {
-                console.warn("Cached token expired. Clearing session.");
-                logout();
-            }
-        } catch (e) {
-            console.error("Failed to parse token", e);
+onMounted(() => {
+    onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+            const idToken = await firebaseUser.getIdToken();
+            user.value = {
+                id: firebaseUser.uid,
+                name: firebaseUser.displayName,
+                email: firebaseUser.email,
+                picture: firebaseUser.photoURL,
+                idToken: idToken
+            };
+            localStorage.setItem('track_star_user', JSON.stringify(user.value));
+        } else {
+            user.value = null;
+            localStorage.removeItem('track_star_user');
         }
-    }
-    
-    // Fetch dynamic config from backend
-    try {
-        const res = await fetch('/api/config');
-        const config = await res.json();
-        if (config.googleClientId) {
-            initGoogleSignIn(config.googleClientId);
-        }
-    } catch (e) {
-        console.error("Failed to fetch app config", e);
-    }
+        isLoading.value = false;
+    });
 });
 
-const initGoogleSignIn = (clientId) => {
-    const tryInit = () => {
-        if (window.google) {
-            window.google.accounts.id.initialize({
-                client_id: clientId,
-                callback: handleCredentialResponse,
-                auto_select: true // Try to auto-sign in if possible
+const handleEmailAuth = async () => {
+    authError.value = '';
+    try {
+        if (isSignUp.value) {
+            const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value);
+            await updateProfile(userCredential.user, {
+                displayName: displayName.value
             });
-            
-            // Render in ALL available containers
-            const btnContainers = document.querySelectorAll('.google-btn-container');
-            btnContainers.forEach(container => {
-                if (container && !user.value) {
-                    window.google.accounts.id.renderButton(
-                        container,
-                        { theme: 'filled_black', size: 'large', type: 'standard', shape: 'pill' }
-                    );
-                }
-            });
-            
-            // Always call prompt() - Google handles the logic of whether to show it
-            // This allows for silent re-authentication (refreshing the token)
-            window.google.accounts.id.prompt();
+            // onAuthStateChanged will handle the rest
         } else {
-            // Script might still be loading, retry in 100ms
-            setTimeout(tryInit, 100);
+            await signInWithEmailAndPassword(auth, email.value, password.value);
         }
-    };
-    tryInit();
-};
-
-
-
-const handleCredentialResponse = (response) => {
-    // response.credential is the ID Token (JWT)
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    
-    const newUser = {
-        id: payload.sub,
-        name: payload.name,
-        email: payload.email,
-        picture: payload.picture,
-        idToken: response.credential
-    };
-    
-    // If we already have a user but the token changed, just update it
-    if (user.value && user.value.id === newUser.id) {
-        console.log("Token refreshed successfully");
-        user.value = { ...user.value, ...newUser };
-    } else {
-        user.value = newUser;
+    } catch (error) {
+        console.error("Auth error:", error);
+        authError.value = error.message;
     }
-    
-    localStorage.setItem('track_star_user', JSON.stringify(user.value));
 };
 
-const logout = () => {
-    user.value = null;
-    localStorage.removeItem('track_star_user');
-    // Re-render button next frame if needed
-    setTimeout(() => {
-        const btnContainers = document.querySelectorAll('.google-btn-container');
-        if (window.google) {
-            btnContainers.forEach(container => {
-                window.google.accounts.id.renderButton(
-                    container,
-                    { theme: 'filled_black', size: 'large', type: 'standard', shape: 'pill' }
-                );
-            });
-            window.google.accounts.id.prompt(); // Re-show prompt if applicable
-        }
-    }, 0);
+const handleGoogleSignIn = async () => {
+    authError.value = '';
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error("Google sign-in error:", error);
+        authError.value = error.message;
+    }
+};
+
+const logout = async () => {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Logout error:", error);
+    }
 };
 </script>
 
@@ -124,24 +93,66 @@ const logout = () => {
     <div class="user-controls">
         <div v-if="user" class="user-info">
             <img v-if="user.picture" :src="user.picture" class="user-avatar" />
-            <span class="user-name">{{ user.name }}</span>
+            <span class="user-name">{{ user.name || user.email }}</span>
             <button class="auth-btn" @click="logout">Logout</button>
         </div>
-        <div v-else class="auth-options">
-            <div class="google-btn-container"></div>
+        <div v-else-if="!isLoading" class="auth-options">
+            <button class="auth-btn" @click="isSignUp = !isSignUp">
+                {{ isSignUp ? 'Switch to Login' : 'Sign Up' }}
+            </button>
         </div>
     </div>
   </header>
 
   <main>
-    <div v-if="!user" class="landing-page">
+    <div v-if="isLoading" class="loading-screen">
+        <div class="loader"></div>
+        <p>Initializing Session...</p>
+    </div>
+
+    <div v-else-if="!user" class="landing-page">
         <!-- Hero Section -->
         <section class="hero-section glass-panel">
             <div class="hero-content">
                 <h1 class="hero-title">Elevate Your <span class="text-gradient">Training</span></h1>
                 <p class="hero-subtitle">The simple, powerful way to plan your week and track your fitness journey. No fluff, just progress.</p>
-                <div class="hero-actions">
-                    <div class="google-btn-container"></div>
+                
+                <div class="auth-form-container glass-panel">
+                    <h2 class="form-title">{{ isSignUp ? 'Create Account' : 'Welcome Back' }}</h2>
+                    <form @submit.prevent="handleEmailAuth" class="auth-form">
+                        <div v-if="isSignUp" class="form-group">
+                            <label>Name</label>
+                            <input v-model="displayName" type="text" placeholder="Your Name" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input v-model="email" type="email" placeholder="email@example.com" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input v-model="password" type="password" placeholder="••••••••" required />
+                        </div>
+                        <div v-if="authError" class="auth-error">{{ authError }}</div>
+                        <button type="submit" class="auth-submit-btn">
+                            {{ isSignUp ? 'Sign Up' : 'Sign In' }}
+                        </button>
+                    </form>
+
+                    <div class="auth-divider">
+                        <span>OR</span>
+                    </div>
+
+                    <button class="google-signin-btn" @click="handleGoogleSignIn">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+                        Sign in with Google
+                    </button>
+
+                    <p class="auth-toggle">
+                        {{ isSignUp ? 'Already have an account?' : "Don't have an account?" }}
+                        <a href="#" @click.prevent="isSignUp = !isSignUp">
+                            {{ isSignUp ? 'Login' : 'Sign Up' }}
+                        </a>
+                    </p>
                 </div>
             </div>
             <div class="hero-visual">
@@ -174,13 +185,6 @@ const logout = () => {
                     <p>Log extra activities easily. Every bit of effort counts toward your long-term success.</p>
                 </div>
             </div>
-        </section>
-
-        <!-- CTA Section -->
-        <section class="cta-section glass-panel">
-            <h2>Ready to start your streak?</h2>
-            <p>Join other athletes using Track Star to stay organized and motivated.</p>
-            <div class="google-btn-container"></div>
         </section>
     </div>
     
@@ -574,6 +578,174 @@ footer {
     margin-bottom: var(--spacing-md);
 }
 
+/* Authentication Form Styles */
+.auth-form-container {
+    padding: var(--spacing-lg);
+    width: 100%;
+    max-width: 400px;
+    margin-top: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.form-title {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-sm);
+    text-align: center;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding-left: 4px;
+}
+
+.form-group input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.auth-submit-btn {
+    background: var(--accent-primary);
+    color: white;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: var(--spacing-xs);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.auth-submit-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.auth-divider span {
+    padding: 0 10px;
+}
+
+.google-signin-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: white;
+    color: #333;
+    padding: 11px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.google-signin-btn img {
+    width: 18px;
+    height: 18px;
+}
+
+.google-signin-btn:hover {
+    background: #f3f4f6;
+    transform: translateY(-1px);
+}
+
+.auth-error {
+    color: var(--accent-danger);
+    font-size: 0.85rem;
+    background: rgba(244, 63, 94, 0.1);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--accent-danger);
+}
+
+.auth-toggle {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.auth-toggle a {
+    color: var(--accent-secondary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-toggle a:hover {
+    text-decoration: underline;
+}
+
+/* Loading Screen */
+.loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 50vh;
+    gap: var(--spacing-md);
+}
+
+.loader {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 @media (max-width: 968px) {
     .hero-section {
         grid-template-columns: 1fr;
@@ -592,6 +764,10 @@ footer {
 
     .hero-subtitle {
         margin: 0 auto;
+    }
+
+    .auth-form-container {
+        max-width: 100%;
     }
 }
 

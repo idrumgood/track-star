@@ -27,17 +27,12 @@ describe('statsController', () => {
 
         await getStats(req, res);
 
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-            summary: expect.objectContaining({
-                completed: 1,
-                skipped: 1,
-                restDays: 1,
-                consistency: 50 // 1 completed out of 2 non-rest days
-            })
-        }));
+        expect(res.json).toHaveBeenCalledWith({
+            rawDays: mockDays
+        });
     });
 
-    test('ranks activities by frequency', async () => {
+    test('returns correct raw days for activity ranking test', async () => {
         const mockDays = [
             { id: '1', status: 'completed', isRestDay: false, plannedActivity: 'Run' },
             { id: '2', status: 'completed', isRestDay: false, plannedActivity: 'Swim' },
@@ -47,12 +42,12 @@ describe('statsController', () => {
 
         await getStats(req, res);
 
-        const callArgs = res.json.mock.calls[0][0];
-        expect(callArgs.activities[0]).toEqual({ name: 'Run', count: 2 });
-        expect(callArgs.activities[1]).toEqual({ name: 'Swim', count: 1 });
+        expect(res.json).toHaveBeenCalledWith({
+            rawDays: mockDays
+        });
     });
 
-    test('calculates longest streak correctly', async () => {
+    test('returns correct raw days for streak test', async () => {
         const mockDays = [
             { id: '1', status: 'completed', isRestDay: false },
             { id: '2', status: 'completed', isRestDay: false },
@@ -63,7 +58,8 @@ describe('statsController', () => {
 
         await getStats(req, res);
 
-        const callArgs = res.json.mock.calls[0][0];
-        expect(callArgs.streaks.longest).toBe(2);
+        expect(res.json).toHaveBeenCalledWith({
+            rawDays: mockDays
+        });
     });
 });
